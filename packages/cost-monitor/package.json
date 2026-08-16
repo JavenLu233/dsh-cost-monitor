@@ -19,8 +19,8 @@
     "build": "node -e \"console.log('aggregate: nothing to build')\""
   },
   "dependencies": {
-    "@javenlu233/dsh-session-cost": "^0.1.0",
-    "@javenlu233/dsh-client-ui-turn-cost": "^0.1.0"
+    "@javenlu233/dsh-session-cost": "workspace:^",
+    "@javenlu233/dsh-client-ui-turn-cost": "workspace:^"
   },
   "files": [
     "cordis.patch.yml"
