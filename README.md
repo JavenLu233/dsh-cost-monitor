@@ -19,7 +19,7 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
 npx @deepseek-ai/dsh web
 ```
 
-这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.2` 会被跳过，实际装上的可能是更早的 `0.1.0`。钉死后装的就是这一版。
+> 这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.2` 会被跳过，实际装上的可能是更早的 `0.1.0`。钉死后装的就是这一版。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -30,8 +30,6 @@ npx @deepseek-ai/dsh web
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 ```
-
-更新到文档里的这一版（先卸再按上面的 `add @0.1.2` 装一次），然后重启 `dsh web` 并强制刷新。
 
 ## 历史会话
 
