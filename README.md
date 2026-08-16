@@ -2,6 +2,8 @@
 
 DeepSeek Harness (DSH) 费用展示插件，按真实场景通过 `dsh plugin` 安装，不改 DSH 源码。
 
+![费用展示：底部累计 + 每轮本轮费用](docs/demo.gif)
+
 - `@javenlu233/dsh-session-cost` — host 侧投影（`sessionCost`），按每次请求的模型/时间计价。
 - `@javenlu233/dsh-client-ui-turn-cost` — client 侧展示（底部累计 + 每消息「本轮」）。
 - `@javenlu233/dsh-cost-monitor` — 聚合包，一键装齐上面两个。
