@@ -41,9 +41,15 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@lates
 
 更新后重启 `dsh web` 并强制刷新。
 
+## 历史会话
+
+费用从会话的完整用量日志折算，不要求当时已经装着本插件。装好并重启后，打开装插件之前的旧会话，底部同样会给出整段累计费用；每条仍加载在窗口里的助手消息也可以看「本轮」。
+
+分页、压缩不会改累计总额。已被压缩、不在当前窗口里的回合没有单独的「本轮」行，它们的费用仍计入底部累计。每条用量按它自己的事件时间套价格表（2026-08-17 前走平价，之后走峰谷），所以跨涨价日的旧会话也会按当时时段计价。
+
 ## 计价
 
-费用为按配置表的**估算**，不是官方账单。每条用量按当时的模型（`request/context`）和事件时间落入下表，单位为 **人民币 / 百万 token**。缓存写入按未命中价计。未记录模型或表中没有该模型时，回退到 `deepseek-v4-flash`。
+费用是按配置表的**估算**，不是官方账单：峰谷取各用量样本的事件时间（组装 message 的时间，不是请求开始时间），中途换模型只按 `request/context` 的粒度计价，结果可能和 provider 账单有出入。单位为 **人民币 / 百万 token**。缓存写入按未命中价计。未记录模型或表中没有该模型时，回退到 `deepseek-v4-flash`。
 
 内置 DeepSeek 价格（2026-08-17 00:00 北京时间起从平价切到峰谷；峰时为北京时间 9:00–12:00、14:00–18:00）：
 
@@ -132,6 +138,8 @@ dsh web
 维护者发包步骤见 [PUBLISHING.md](./PUBLISHING.md)。用户侧安装见上文「安装（使用者）」，不再使用本地 `link:`。
 
 ## 已知限制
+
+显示值是估算：峰谷用 message 组装时间而非请求开始时间，换模型只按 `request/context` 的粒度，可能和 provider 账单不一致。
 
 `dsh-session-cost` 依赖 host 的 `sessionProjections` 投影服务、`ui-turn-cost` 依赖
 `composer.dock` / `assistant-actions` 两个 slot。这些 API 来自 DSH 的 `@deepseek-ai/dsh-*`
