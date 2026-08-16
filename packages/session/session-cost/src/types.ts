@@ -32,12 +32,43 @@ export interface TurnCost {
   output: number
 }
 
+/** Four billed buckets plus their sum: one cut of the priced cube. */
+export interface CostSlice {
+  /** Uncached (cache-miss) input bucket. */
+  uncachedInput: CostBucket
+  /** Cache-read input bucket. */
+  cacheRead: CostBucket
+  /** Cache-write input bucket (billed at the miss rate). */
+  cacheWrite: CostBucket
+  /** Output bucket. */
+  output: CostBucket
+  /** Sum of the four bucket costs. */
+  total: number
+}
+
+/** One turn's tokens and cost, for the session trend chart. */
+export interface TurnCostSlice extends CostSlice {
+  /** Turn number this row aggregates. */
+  turn: number
+}
+
+/** One model's tokens and cost across the whole log. */
+export interface RouteCostSlice extends CostSlice {
+  /** Provider-owned model id this cut was attributed to. */
+  route: string
+}
+
+/** Price schedule a usage sample folded into. */
+export type PriceSchedule = 'flat' | 'peak' | 'offPeak'
+
 /**
  * Whole-log session cost, folded from provider usage reports and priced by the
  * configured table. Every field is 0 until its first contributing event; the
  * currency labels the configured unit and `total` is the sum of the four
  * bucket costs. `turns` carries the same split per turn number, so a
  * per-message readout can show "this turn" without any client-side pricing.
+ * `series` / `byRoute` / `bySchedule` / `cacheSaved` are the chart cuts of the
+ * same cube (turn × route × schedule); they do not change fold state.
  */
 export interface SessionCostProjection {
   /** Currency label the configured prices are denominated in (e.g. `CNY`). */
@@ -58,6 +89,14 @@ export interface SessionCostProjection {
   output: CostBucket
   /** Per-turn cost keyed by turn number, for the per-message "this turn" readout. */
   turns: Record<number, TurnCost>
+  /** Per-turn tokens and cost, ordered by turn number. */
+  series: TurnCostSlice[]
+  /** Per-model tokens and cost, ordered by cost descending. */
+  byRoute: RouteCostSlice[]
+  /** Flat / peak / off-peak cuts; unused schedules stay a zero slice. */
+  bySchedule: Record<PriceSchedule, CostSlice>
+  /** Cost avoided by cache reads versus billing those tokens at the miss rate. */
+  cacheSaved: number
 }
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
