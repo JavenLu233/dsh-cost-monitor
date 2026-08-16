@@ -1,7 +1,7 @@
 /**
  * Session cost stats body: composition donut, per-turn trend, cache-savings
  * line, a per-model cut (always shown — a session may switch models), and a
- * schedule cut collapsed to a sentence when only one price window billed.
+ * schedule cut when more than one price window billed.
  * Priced host-side; this file only charts the `sessionCost` cuts.
  *
  * @author linqiya.1
@@ -81,24 +81,20 @@ export function CostPanel({ cost, t }: CostPanelProps) {
           />
         </section>
       )}
-      {usedSchedules.length > 1 && bySchedule !== undefined
-        ? (
-          <section className={css.section}>
-            <h3 className={css.title}>{t('cost.bySchedule')}</h3>
-            <SliceBarList
-              rows={usedSchedules.map(schedule => ({
-                key: schedule,
-                label: t(SCHEDULE_KEY[schedule]),
-                slice: bySchedule[schedule],
-              }))}
-              currency={cost.currency}
-              t={t}
-            />
-          </section>
-        )
-        : usedSchedules[0] !== undefined && (
-          <p className={css.line}>{t('cost.singleSchedule', { schedule: t(SCHEDULE_KEY[usedSchedules[0]]) })}</p>
-        )}
+      {usedSchedules.length > 1 && bySchedule !== undefined && (
+        <section className={css.section}>
+          <h3 className={css.title}>{t('cost.bySchedule')}</h3>
+          <SliceBarList
+            rows={usedSchedules.map(schedule => ({
+              key: schedule,
+              label: t(SCHEDULE_KEY[schedule]),
+              slice: bySchedule[schedule],
+            }))}
+            currency={cost.currency}
+            t={t}
+          />
+        </section>
+      )}
     </div>
   )
 }

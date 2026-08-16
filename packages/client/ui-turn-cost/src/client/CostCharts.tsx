@@ -155,12 +155,12 @@ export interface TrendChartProps {
 
 /**
  * Render stacked per-turn cost bars (scaled to the most expensive turn) and a
- * cumulative line (scaled to the session total). Hovering a column fills a
- * detail card under the chart — not a cramped tooltip string.
+ * cumulative line (scaled to the session total). The detail card is always
+ * shown: the first turn until the user hovers another column.
  * @param props - the turn series, currency, and locale interpolator.
  */
 export function TrendChart({ series, currency, t }: TrendChartProps) {
-  const [hovered, setHovered] = useState<number | null>(null)
+  const [selected, setSelected] = useState(0)
   const points = useMemo(() => {
     let cumulative = 0
     return series.map(row => {
@@ -186,9 +186,10 @@ export function TrendChart({ series, currency, t }: TrendChartProps) {
   const line = points
     .map((point, index) => `${plotLeft + index * slot + slot / 2},${yLine(point.cumulative)}`)
     .join(' ')
-  const hover = hovered === null ? undefined : points[hovered]
+  const active = Math.min(selected, points.length - 1)
+  const hover = points[active]
   return (
-    <>
+    <div className={css.trendBlock}>
       <div className={css.trendWrap}>
         <div className={css.trendPlot} style={{ width }}>
           <svg
@@ -230,7 +231,7 @@ export function TrendChart({ series, currency, t }: TrendChartProps) {
               })
               return (
                 <g key={point.row.turn}>
-                  {hovered === index && (
+                  {active === index && (
                     <rect className={css.hover} x={x} y={plotTop} width={slot} height={plotHeight} />
                   )}
                   {stacks.filter(stack => stack.height > 0).map(stack => (
@@ -294,32 +295,28 @@ export function TrendChart({ series, currency, t }: TrendChartProps) {
                   height: plotHeight,
                 }}
                 aria-label={heading}
-                onMouseEnter={() => { setHovered(index) }}
-                onMouseLeave={() => { setHovered(null) }}
-                onFocus={() => { setHovered(index) }}
-                onBlur={() => { setHovered(null) }}
+                aria-pressed={active === index}
+                onMouseEnter={() => { setSelected(index) }}
+                onFocus={() => { setSelected(index) }}
               />
             )
           })}
         </div>
       </div>
-      {hover === undefined
-        ? <p className={css.detail}>{t('cost.trendHint')}</p>
-        : (
-          <SliceDetailCard
-            title={t('cost.turnIndex', { turn: String(hover.row.turn) })}
-            slice={hover.row}
-            currency={currency}
-            t={t}
-            whole={lineMax}
-            footer={{
-              label: t('cost.cumulativeLabel'),
-              value: hover.cumulative,
-              whole: lineMax,
-            }}
-          />
-        )}
-    </>
+      <p className={css.detail}>{t('cost.trendHint')}</p>
+      <SliceDetailCard
+        title={t('cost.turnIndex', { turn: String(hover.row.turn) })}
+        slice={hover.row}
+        currency={currency}
+        t={t}
+        whole={lineMax}
+        footer={{
+          label: t('cost.cumulativeLabel'),
+          value: hover.cumulative,
+          whole: lineMax,
+        }}
+      />
+    </div>
   )
 }
 

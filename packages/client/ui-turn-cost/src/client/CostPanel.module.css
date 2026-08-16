@@ -10,6 +10,8 @@
   gap: 24px;
   max-height: min(70vh, 640px);
   overflow: auto;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
   padding-bottom: 4px;
   padding-right: 8px;
   color: var(--dsw-alias-label-secondary);
@@ -117,6 +119,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.trendBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .trendWrap {
   overflow-x: auto;
 }
@@ -172,6 +181,7 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 8px;
+  overflow-anchor: none;
   background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.08));
 }
 
@@ -270,10 +280,4 @@
   min-width: 0;
   padding-top: 8px;
   border-top: 1px solid var(--dsw-alias-border-inverted, rgba(127, 127, 127, 0.16));
-}
-
-.line {
-  margin: 0;
-  color: var(--dsw-alias-label-secondary);
-  font-variant-numeric: tabular-nums;
 }

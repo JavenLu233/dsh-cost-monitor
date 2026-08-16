@@ -28,7 +28,6 @@ export type TurnCostKey =
   | 'cost.trendHint'
   | 'cost.tokens'
   | 'cost.share'
-  | 'cost.singleSchedule'
   | 'cost.bucket.uncached'
   | 'cost.bucket.hit'
   | 'cost.bucket.write'
@@ -66,10 +65,9 @@ export const zh: Record<TurnCostKey, string> = {
   'cost.ifAllMiss': '若全部未命中 {cost}',
   'cost.turnIndex': '第 {turn} 轮',
   'cost.cumulativeLabel': '累计',
-  'cost.trendHint': '悬停柱查看明细 · 柱按本轮最高归一 · 线为累计',
+  'cost.trendHint': '悬停柱切换明细 · 柱按本轮最高归一 · 线为累计',
   'cost.tokens': '{tokens} tok',
   'cost.share': '{percent}%',
-  'cost.singleSchedule': '价区 {schedule}',
   'cost.bucket.uncached': '未命中',
   'cost.bucket.hit': '命中',
   'cost.bucket.write': '缓存写入',
@@ -101,10 +99,9 @@ export const en: Record<TurnCostKey, string> = {
   'cost.ifAllMiss': 'If all miss {cost}',
   'cost.turnIndex': 'Turn {turn}',
   'cost.cumulativeLabel': 'Cumulative',
-  'cost.trendHint': 'Hover a bar for detail · bars scaled to the peak turn · line is cumulative',
+  'cost.trendHint': 'Hover a bar to switch detail · bars scaled to the peak turn · line is cumulative',
   'cost.tokens': '{tokens} tok',
   'cost.share': '{percent}%',
-  'cost.singleSchedule': 'Schedule {schedule}',
   'cost.bucket.uncached': 'Miss',
   'cost.bucket.hit': 'Hit',
   'cost.bucket.write': 'Cache write',
