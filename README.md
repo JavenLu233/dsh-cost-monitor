@@ -41,6 +41,47 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@lates
 
 更新后重启 `dsh web` 并强制刷新。
 
+## 计价
+
+费用为按配置表的**估算**，不是官方账单。每条用量按当时的模型（`request/context`）和事件时间落入下表，单位为 **人民币 / 百万 token**。缓存写入按未命中价计。未记录模型或表中没有该模型时，回退到 `deepseek-v4-flash`。
+
+内置 DeepSeek 价格（2026-08-17 00:00 北京时间起从平价切到峰谷；峰时为北京时间 9:00–12:00、14:00–18:00）：
+
+| 模型 | 时段 | 命中 | 未命中 | 缓存写 | 输出 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `deepseek-v4-flash` | 平价（涨价前） | 0.02 | 1 | 1 | 2 |
+| | 峰时 | 0.10 | 3 | 3 | 9 |
+| | 谷时 | 0.05 | 1.5 | 1.5 | 4.5 |
+| `deepseek-v4-pro` | 平价（涨价前） | 0.025 | 3 | 3 | 6 |
+| | 峰时 | 0.30 | 9 | 9 | 27 |
+| | 谷时 | 0.15 | 4.5 | 4.5 | 13.5 |
+
+### 自定义价格
+
+编辑 profile 的 `cordis.patch.yml`（默认 `~/.dsh/profiles/web/cordis.patch.yml`），按 id 覆盖 `session-cost` 的 `config`。patch **整段替换** `config`，不会和默认表做字段级合并；`prices` 也是整表替换，要改价请把用到的模型都写全。未写的配置项仍走插件 schema 默认值。
+
+```yaml
+- id: session-cost
+  config:
+    currency: CNY
+    defaultRoute: deepseek-v4-flash
+    # 2026-08-17 00:00 北京时间；更早的用量走 flat
+    effectiveAt: 1786896000000
+    peakWindows: [[9, 12], [14, 18]]
+    timezoneOffsetMinutes: 480
+    prices:
+      deepseek-v4-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
+        peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+      deepseek-v4-pro:
+        flat: { cacheRead: 0.025, uncachedInput: 3, cacheWrite: 3, output: 6 }
+        peak: { cacheRead: 0.30, uncachedInput: 9, cacheWrite: 9, output: 27 }
+        offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }
+```
+
+给其他模型加价：在 `prices` 里用 provider 侧模型 id 再加一项。改完后重启 `dsh web`。
+
 ## 开发
 
 ### 结构
@@ -98,3 +139,7 @@ dsh web
 npm 上尚未发布的传递依赖），改为在 peerDependencies 中声明、由真实 `dsh web` 宿主提供。
 因此在「本地 link + 真实 dsh web」下可跑；需确认DSH 版本
 已包含上述 API。
+
+## License
+
+MIT，见 [LICENSE](./LICENSE)。

@@ -1,6 +1,7 @@
 {
   "name": "dsh-cost-plugin",
   "private": true,
+  "license": "MIT",
   "description": "DeepSeek Harness cost-display plugins: session-cost (host projection) + ui-turn-cost (client readout), plus a cost-monitor aggregate bundle for `dsh plugin --profile web add`.",
   "type": "module",
   "scripts": {
