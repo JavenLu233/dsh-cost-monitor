@@ -11,7 +11,8 @@
  * otherwise `peak`/`offPeak` by the configured windows. Prices are applied in
  * `view`, never stored in state, so re-pricing a folded log after a config
  * change needs no re-fold; the schedule and switchover are fold input, so
- * changing them bumps {@link stateVersion}.
+ * changing them bumps {@link stateVersion}. Chart cuts (`series`, `byRoute`,
+ * `bySchedule`, `cacheSaved`) are assembled in `view` from the same cube.
  *
  * @module @javenlu233/dsh-session-cost/projection
  */
@@ -21,7 +22,7 @@ import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { ZERO_BUCKET_PRICES } from './pricing.ts'
 import type { BucketPrices, CostConfig } from './pricing.ts'
-import type { SessionCostProjection, TurnCost } from './types.ts'
+import type { CostSlice, PriceSchedule, SessionCostProjection, TurnCost } from './types.ts'
 
 /** Token buckets of one usage sample (mirrors token-meter's disjoint buckets). */
 interface CostBuckets {
@@ -120,6 +121,14 @@ const turnCostSchema = z.object({
   output: z.number(),
 }).strict()
 
+const costSliceSchema = z.object({
+  uncachedInput: costBucketSchema,
+  cacheRead: costBucketSchema,
+  cacheWrite: costBucketSchema,
+  output: costBucketSchema,
+  total: z.number(),
+}).strict()
+
 const sessionCostSchema = z.object({
   currency: z.string(),
   total: z.number(),
@@ -130,7 +139,50 @@ const sessionCostSchema = z.object({
   cacheWrite: costBucketSchema,
   output: costBucketSchema,
   turns: z.record(z.string(), turnCostSchema),
+  series: z.array(costSliceSchema.extend({ turn: z.number().int() }).strict()),
+  byRoute: z.array(costSliceSchema.extend({ route: z.string() }).strict()),
+  bySchedule: z.object({
+    flat: costSliceSchema,
+    peak: costSliceSchema,
+    offPeak: costSliceSchema,
+  }).strict(),
+  cacheSaved: z.number(),
 }).strict() as unknown as z.ZodType<SessionCostProjection>
+
+/** Empty priced cut (tokens and cost all 0). */
+const zeroSlice = (): CostSlice => ({
+  uncachedInput: { tokens: 0, cost: 0 },
+  cacheRead: { tokens: 0, cost: 0 },
+  cacheWrite: { tokens: 0, cost: 0 },
+  output: { tokens: 0, cost: 0 },
+  total: 0,
+})
+
+/** Add one priced cell into a mutable slice. */
+function addPriced(
+  slice: CostSlice,
+  buckets: CostBuckets,
+  priced: { uncachedInput: number; cacheRead: number; cacheWrite: number; output: number },
+): void {
+  slice.uncachedInput.tokens += buckets.uncachedInputTokens
+  slice.uncachedInput.cost += priced.uncachedInput
+  slice.cacheRead.tokens += buckets.cacheReadTokens
+  slice.cacheRead.cost += priced.cacheRead
+  slice.cacheWrite.tokens += buckets.cacheWriteTokens
+  slice.cacheWrite.cost += priced.cacheWrite
+  slice.output.tokens += buckets.outputTokens
+  slice.output.cost += priced.output
+  slice.total += priced.uncachedInput + priced.cacheRead + priced.cacheWrite + priced.output
+}
+
+/** Get-or-create a zero slice in a keyed map. */
+function takeSlice<K>(map: Map<K, CostSlice>, key: K): CostSlice {
+  const existing = map.get(key)
+  if (existing !== undefined) return existing
+  const created = zeroSlice()
+  map.set(key, created)
+  return created
+}
 
 /**
  * Classify a request timestamp into a price bucket: flat before the
@@ -152,11 +204,19 @@ function bucketPriceFor(config: CostConfig, route: string, bucket: PriceBucket):
   return routePrices[bucket]
 }
 
-/** Price the folded buckets and assemble the wire value (session totals + per-turn costs). */
+/** Price the folded buckets and assemble the wire value (session totals + chart cuts). */
 function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCostProjection {
   const totals = zeroBuckets()
   const costs = { uncachedInput: 0, cacheRead: 0, cacheWrite: 0, output: 0 }
   const turns: Record<number, TurnCost> = {}
+  const byTurn = new Map<number, CostSlice>()
+  const byRoute = new Map<string, CostSlice>()
+  const bySchedule: Record<PriceSchedule, CostSlice> = {
+    flat: zeroSlice(),
+    peak: zeroSlice(),
+    offPeak: zeroSlice(),
+  }
+  let cacheSaved = 0
   for (const [key, buckets] of Object.entries(state.byKey)) {
     totals.uncachedInputTokens += buckets.uncachedInputTokens
     totals.outputTokens += buckets.outputTokens
@@ -164,20 +224,26 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
     totals.cacheWriteTokens += buckets.cacheWriteTokens
     const { turn, route, bucket } = splitKey(key)
     const price = bucketPriceFor(config, route, bucket)
-    const uncachedInput = buckets.uncachedInputTokens / 1_000_000 * price.uncachedInput
-    const cacheRead = buckets.cacheReadTokens / 1_000_000 * price.cacheRead
-    const cacheWrite = buckets.cacheWriteTokens / 1_000_000 * price.cacheWrite
-    const output = buckets.outputTokens / 1_000_000 * price.output
-    costs.uncachedInput += uncachedInput
-    costs.cacheRead += cacheRead
-    costs.cacheWrite += cacheWrite
-    costs.output += output
+    const priced = {
+      uncachedInput: buckets.uncachedInputTokens / 1_000_000 * price.uncachedInput,
+      cacheRead: buckets.cacheReadTokens / 1_000_000 * price.cacheRead,
+      cacheWrite: buckets.cacheWriteTokens / 1_000_000 * price.cacheWrite,
+      output: buckets.outputTokens / 1_000_000 * price.output,
+    }
+    costs.uncachedInput += priced.uncachedInput
+    costs.cacheRead += priced.cacheRead
+    costs.cacheWrite += priced.cacheWrite
+    costs.output += priced.output
     const turnCost = turns[turn] ?? { uncachedInput: 0, cacheRead: 0, cacheWrite: 0, output: 0 }
-    turnCost.uncachedInput += uncachedInput
-    turnCost.cacheRead += cacheRead
-    turnCost.cacheWrite += cacheWrite
-    turnCost.output += output
+    turnCost.uncachedInput += priced.uncachedInput
+    turnCost.cacheRead += priced.cacheRead
+    turnCost.cacheWrite += priced.cacheWrite
+    turnCost.output += priced.output
     turns[turn] = turnCost
+    addPriced(takeSlice(byTurn, turn), buckets, priced)
+    addPriced(takeSlice(byRoute, route), buckets, priced)
+    addPriced(bySchedule[bucket], buckets, priced)
+    cacheSaved += buckets.cacheReadTokens / 1_000_000 * (price.uncachedInput - price.cacheRead)
   }
   const billedInputTokens = totals.uncachedInputTokens + totals.cacheReadTokens + totals.cacheWriteTokens
   return {
@@ -192,6 +258,14 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
     cacheWrite: { tokens: totals.cacheWriteTokens, cost: costs.cacheWrite },
     output: { tokens: totals.outputTokens, cost: costs.output },
     turns,
+    series: [...byTurn.entries()]
+      .sort((left, right) => left[0] - right[0])
+      .map(([turn, slice]) => ({ turn, ...slice })),
+    byRoute: [...byRoute.entries()]
+      .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
+      .map(([route, slice]) => ({ route, ...slice })),
+    bySchedule,
+    cacheSaved,
   }
 }
 

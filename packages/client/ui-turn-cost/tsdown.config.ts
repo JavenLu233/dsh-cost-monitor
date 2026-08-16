@@ -8,7 +8,7 @@
  */
 import { defineConfig } from 'tsdown'
 import { readFile } from 'node:fs/promises'
-import { dirname, resolve as resolvePath } from 'node:path'
+import { basename, dirname, resolve as resolvePath } from 'node:path'
 import { transform } from 'lightningcss'
 
 const ID = '@javenlu233/dsh-client-ui-turn-cost'
@@ -102,7 +102,7 @@ export default defineConfig([
           for (const [local, exp] of Object.entries(cssExports ?? {})) classMap[local] = exp.name
           return [
             `const css = ${JSON.stringify(code.toString())};`,
-            `const tagId = ${JSON.stringify(`${ID}/cost-tail`)};`,
+            `const tagId = ${JSON.stringify(`${ID}/${basename(fileId)}`)};`,
             'if (typeof document !== \'undefined\' && document.querySelector(\'style[data-plugin-css=\' + JSON.stringify(tagId) + \']\') === null) {',
             '  const tag = document.createElement(\'style\');',
             `  tag.dataset.plugin = ${JSON.stringify(ID)};`,

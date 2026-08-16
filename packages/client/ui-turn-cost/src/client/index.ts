@@ -1,9 +1,9 @@
 /**
  * Inline cost plugin, browser half: the session total readout (plus a global
- * expand-all eye toggle) in the composer dock, and a per-turn cost toggle in
- * the assistant-message action strip. Both are list-slot entries, so they
- * coexist with the produced-files row and the stats line; composing this
- * plugin out removes both.
+ * expand-all eye toggle and a stats dialog) in the composer dock, and a
+ * per-turn cost toggle in the assistant-message action strip. Both are
+ * list-slot entries, so they coexist with the produced-files row and the
+ * stats line; composing this plugin out removes both.
  */
 import type { Context } from '@deepseek-ai/cordis'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
