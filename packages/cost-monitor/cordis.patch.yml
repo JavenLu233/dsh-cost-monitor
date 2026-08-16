@@ -1,0 +1,9 @@
+# The cost-display aggregate bundle patch: activates both the host projection
+# data source and the browser client readout in one layer. Session-cost is a
+# host row (registers the sessionCost projection under sessionProjections);
+# ui-turn-cost is a browser roster row (dsh.client).
+- insert:
+    - id: session-cost
+      name: '@javenlu233/dsh-session-cost'
+    - id: ui-turn-cost
+      name: '@javenlu233/dsh-client-ui-turn-cost'

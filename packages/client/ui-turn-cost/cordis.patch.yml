@@ -1,0 +1,8 @@
+# The inline-turn-cost client plugin's bundle patch: activates the browser
+# half by inserting its roster row into the web profile's `dsh.client` list.
+# The session-cost (host projection) row is aggregated by the cost-monitor bundle,
+# not here — this package is a pure client consumer of the `sessionCost`
+# projection key.
+- insert:
+    - id: ui-turn-cost
+      name: '@javenlu233/dsh-client-ui-turn-cost'

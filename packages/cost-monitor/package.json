@@ -1,0 +1,28 @@
+{
+  "name": "@javenlu233/dsh-cost-monitor",
+  "description": "Cost-display aggregate bundle: installs the session-cost host projection and the ui-turn-cost client readout in one `dsh plugin` add.",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "node -e \"console.log('aggregate: nothing to build')\""
+  },
+  "dependencies": {
+    "@javenlu233/dsh-session-cost": "workspace:*",
+    "@javenlu233/dsh-client-ui-turn-cost": "workspace:*"
+  },
+  "files": [
+    "cordis.patch.yml"
+  ]
+}

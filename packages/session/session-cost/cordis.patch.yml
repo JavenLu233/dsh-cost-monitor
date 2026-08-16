@@ -1,0 +1,6 @@
+# The session-cost host plugin's bundle patch: activates the host projection
+# data source under the `sessionProjections` registry (a base-layer service).
+# The cost-monitor aggregate bundle merges this row with the client row.
+- insert:
+    - id: session-cost
+      name: '@javenlu233/dsh-session-cost'
