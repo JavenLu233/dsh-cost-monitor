@@ -39,6 +39,9 @@
   "dependencies": {
     "zod": "^4.4.3"
   },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
   "devDependencies": {
     "tsdown": "0.22.2",
     "typescript": "*"
