@@ -13,9 +13,11 @@ DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用。
 装好 [Node.js](https://nodejs.org/) 后执行：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2 # 此处的版本号随每次正式发布更新
 npx @deepseek-ai/dsh web
 ```
+
+这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.2` 会被跳过，实际装上的可能是更早的 `0.1.0`。钉死后装的就是这一版。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -27,19 +29,7 @@ npx @deepseek-ai/dsh web
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 ```
 
-更新（不必改版本号或 lockfile）：
-
-```bash
-npx @deepseek-ai/dsh plugin --profile web update
-```
-
-`add` 时写入的是 `^0.1.0` 这类范围，`update` 会在范围内升到最新（`0.1.1`、`0.1.2`…）。刚发布几分钟的版本有时会被 pnpm 的发布冷却拦住，这时指定版本再 add 一次即可：
-
-```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@latest
-```
-
-更新后重启 `dsh web` 并强制刷新。
+更新到文档里的这一版（先卸再按上面的 `add @0.1.2` 装一次），然后重启 `dsh web` 并强制刷新。
 
 ## 历史会话
 
@@ -111,7 +101,22 @@ pnpm build   # 或 pnpm -r build
 
 产物：`packages/*/*/lib/{index,invariant}.js` + `packages/client/ui-turn-cost/lib/client.js`。
 
-### 本地调试安装（不改 DSH 源码）
+改代码后：`pnpm build`（或只 build 改过的包）→ 重启 `dsh web` → `Ctrl+Shift+R`。`link-profile` 只需包路径变了才重跑。
+
+### 发布流程
+
+按这条链路走，不要跳过 beta 直接发 `latest`：
+
+1. **本地 link** 调通
+2. **发 beta 包**，用 npm 的 `@beta` 再验一遍
+3. **PR 合进 `main`**
+4. **发正式包**（`latest`）
+
+发包细节（顺序、OTP、`workspace:^`）见 [PUBLISHING.md](./PUBLISHING.md)。三个包的 `version` 必须一起改。
+
+#### 1. 本地 link
+
+不改 DSH 源码。Windows 上请在 harness 仓库里用 `pnpm dsh ...`，不要 `npx @deepseek-ai/dsh`（bin 可能指到不存在的 `lib/bin.js`）。
 
 ```bash
 # 1. 构建
@@ -121,21 +126,59 @@ pnpm install && pnpm build
 node scripts/link-profile.mjs
 
 # 3. 用本地 link 装聚合包（把 <repo> 换成仓库根目录的绝对路径）
-# 如果是在 harness 仓库，改为 pnpm dsh ... 即可
+dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
-# 4. 重启 dsh web；打开页面后等几秒再强制刷新（Ctrl+Shift+R / Cmd+Shift+R）
+# 4. 重启 dsh web；打开页面后等几秒再强制刷新
 dsh web
 ```
 
-验证：`dsh --profile web --dump-config` 应出现 `# == @javenlu233/dsh-cost-monitor` 及
-`session-cost` / `ui-turn-cost` 两行。
+验证：`dsh --profile web --dump-config` 应出现 `# == @javenlu233/dsh-cost-monitor` 及 `session-cost` / `ui-turn-cost` 两行。
 
-卸载：`dsh plugin --profile web remove @javenlu233/dsh-cost-monitor`，再重启。
+#### 2. 发 beta
 
-### 发布
+三个包改成预发布号（例如上次正式版是 `0.1.1`，这次用 `0.1.2-beta.0`），构建后带 `--tag beta` 发布，**不会**覆盖 `latest`：
 
-维护者发包步骤见 [PUBLISHING.md](./PUBLISHING.md)。用户侧安装见上文「安装（使用者）」，不再使用本地 `link:`。
+```bash
+pnpm build
+
+cd packages/session/session-cost && pnpm publish --tag beta --no-git-checks && cd ../../..
+cd packages/client/ui-turn-cost && pnpm publish --tag beta --no-git-checks && cd ../../..
+cd packages/cost-monitor && pnpm publish --tag beta --no-git-checks && cd ../..
+```
+
+卸掉 link，改装 beta：
+
+```bash
+dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta
+```
+
+必须写 `@beta` 或完整预发布号。不要用裸包名或 `@latest`（冷却原因见上文「安装」）。重启 `dsh web` 并强制刷新。
+
+#### 3. PR 合进 main
+
+beta 验证通过后开 PR，合进 `main`。不要在合入前发正式包。
+
+#### 4. 发正式包
+
+在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.2`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.2` 改成新号。
+
+```bash
+pnpm build
+
+cd packages/session/session-cost && pnpm publish --no-git-checks && cd ../../..
+cd packages/client/ui-turn-cost && pnpm publish --no-git-checks && cd ../../..
+cd packages/cost-monitor && pnpm publish --no-git-checks && cd ../..
+```
+
+验证安装用同一钉死版本：
+
+```bash
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
+```
+
+重启并强制刷新。
 
 ## 已知限制
 
