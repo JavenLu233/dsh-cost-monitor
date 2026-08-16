@@ -20,7 +20,7 @@ cost-plugin/
 
 ## 构建
 
-```powershell
+```bash
 pnpm install
 pnpm build   # 或 pnpm -r build
 ```
@@ -29,15 +29,15 @@ pnpm build   # 或 pnpm -r build
 
 ## 本地调试安装（不改 DSH 源码）
 
-```powershell
+```bash
 # 1. 构建
 pnpm install && pnpm build
 
 # 2. 把子包链接进 profile（聚合包的 children 依赖靠这个解析）
 node scripts/link-profile.mjs
 
-# 3. 装聚合包（等价 dsh-web-ui 的 link: 方式）
-dsh plugin --profile web add "link:<本目录>/packages/cost-monitor"
+# 3. 用本地 link 装聚合包（把 <repo> 换成仓库根目录的绝对路径）
+dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
 # 4. 重启 dsh web + 硬刷新
 ```
@@ -49,10 +49,13 @@ dsh plugin --profile web add "link:<本目录>/packages/cost-monitor"
 
 ## 发布
 
-scope 目前是 `@javenlu233`（npm 登录用户 `javenlu233`）。发布前：
+包发布在 `@javenlu233` scope，步骤见 [PUBLISHING.md](./PUBLISHING.md)。发布后用户侧改用：
 
-1. 把两个子包 + 聚合包 `npm publish`（scope 与包名已就位）。
-2. 用户侧改用 `dsh plugin --profile web add @javenlu233/dsh-cost-monitor`（不再 link）。
+```bash
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor
+```
+
+不再需要本地 `link:`。
 
 ## 已知限制
 

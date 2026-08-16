@@ -5,6 +5,12 @@ node_modules/
 lib/
 *.tsbuildinfo
 
+# local / secrets
+.env
+.env.*
+*.pem
+*.key
+
 # OS / editor
 .DS_Store
 Thumbs.db

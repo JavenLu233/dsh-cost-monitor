@@ -10,10 +10,10 @@
 
 ## 前置条件
 
-- 已登录 npm，且登录用户拥有 `@javenlu233` scope：
+- 已登录 npm，且当前账号拥有 `@javenlu233` scope 的发布权限：
 
-  ```powershell
-  npm whoami          # 应输出 javenlu233
+  ```bash
+  npm whoami
   ```
 
 - 已安装 pnpm（发布必须用 `pnpm publish`，原因见文末「注意事项」）。
@@ -22,26 +22,26 @@
 
 **发布顺序不能反**：`cost-monitor` 依赖前两个包，必须先发 `session-cost`、`ui-turn-cost`，最后发 `cost-monitor`。
 
-```powershell
-cd C:\desktop\dsh-workspace\cost-plugin
+在仓库根目录执行：
 
+```bash
 # 可选：确保构建产物是最新的（lib/index.js、lib/client.js 等）
 pnpm build
 
 # 1. host 投影
-cd packages\session\session-cost
+cd packages/session/session-cost
 pnpm publish
-cd ..\..\..
+cd ../../..
 
 # 2. client 展示
-cd packages\client\ui-turn-cost
+cd packages/client/ui-turn-cost
 pnpm publish
-cd ..\..\..
+cd ../../..
 
 # 3. 聚合包
-cd packages\cost-monitor
+cd packages/cost-monitor
 pnpm publish
-cd ..\..\..
+cd ../..
 ```
 
 如果中途提示 OTP / 2FA，输入 npm 的二次验证码即可。
@@ -50,7 +50,7 @@ cd ..\..\..
 
 三个包都应返回 `0.1.0`（或你本次 bump 的版本号）：
 
-```powershell
+```bash
 npm view @javenlu233/dsh-session-cost version
 npm view @javenlu233/dsh-client-ui-turn-cost version
 npm view @javenlu233/dsh-cost-monitor version
@@ -58,7 +58,7 @@ npm view @javenlu233/dsh-cost-monitor version
 
 ## npx 场景安装验证
 
-```powershell
+```bash
 # 装聚合包（真实场景）
 npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
 
