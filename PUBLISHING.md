@@ -25,33 +25,45 @@
 
 **发布顺序不能反**：`cost-monitor` 依赖前两个包，必须先发 `session-cost`、`ui-turn-cost`，最后发 `cost-monitor`。
 
-在仓库根目录执行：
+日常流程是：本地 `link:` 调通 → 发 **beta**（`--tag beta`）→ PR 合进 `main` → 再发正式包。完整说明见仓库 [README.md](./README.md) 的「发布流程」。
+
+### 正式包（`latest`）
+
+三个包的 `version` 改成正式号（例如 `0.1.2`）。在仓库根目录：
 
 ```bash
-# 可选：确保构建产物是最新的（lib/index.js、lib/client.js 等）
 pnpm build
 
-# 1. host 投影
 cd packages/session/session-cost
 pnpm publish
 cd ../../..
 
-# 2. client 展示
 cd packages/client/ui-turn-cost
 pnpm publish
 cd ../../..
 
-# 3. 聚合包
 cd packages/cost-monitor
 pnpm publish
 cd ../..
 ```
 
+工作区不干净时加 `--no-git-checks`。不要加 `--tag`，默认就是 `latest`。
+
+### beta 包（不覆盖 `latest`）
+
+三个包改成预发布号（例如 `0.1.2-beta.0`），同样顺序，带 `--tag beta`：
+
+```bash
+pnpm publish --tag beta --no-git-checks
+```
+
+安装时必须指定 tag 或完整版本：`dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta`。
+
 如果中途提示 OTP / 2FA，输入 npm 的二次验证码即可。
 
 ## 发布后验证
 
-三个包都应返回 `0.1.0`（或你本次 bump 的版本号）：
+三个包都应返回本次正式号（例如 `0.1.2`）：
 
 ```bash
 npm view @javenlu233/dsh-session-cost version
@@ -62,8 +74,8 @@ npm view @javenlu233/dsh-cost-monitor version
 ## npx 场景安装验证
 
 ```bash
-# 装聚合包（真实场景）
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
+# 装聚合包（钉死版本，与 README 安装段一致）
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
 
 # 确认配置层已挂载
 npx @deepseek-ai/dsh --profile web --dump-config
@@ -100,7 +112,7 @@ npx @deepseek-ai/dsh --profile web --dump-config
 
 ### 再次发布时先 bump 版本号
 
-npm 不允许覆盖已发布的版本。再次发布前，把三个包的 `version` 都改成新版本（例如 `0.1.1`），再按上面的顺序重新 `pnpm publish`。
+npm 不允许覆盖已发布的版本。再次发布前，把三个包的 `version` 都改成新版本（例如 `0.1.2` 或 `0.1.3-beta.0`），再按上面的顺序重新 `pnpm publish`。
 
 ### 宿主版本依赖
 
