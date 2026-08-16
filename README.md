@@ -1,8 +1,10 @@
 # dsh-cost-plugin
 
-DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用。
+DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话统计图。
 
 ![费用展示：底部累计 + 每轮本轮费用](docs/demo.gif)
+
+![费用统计：构成、趋势与按轮明细](docs/charts.png)
 
 - `@javenlu233/dsh-session-cost` — host 侧投影（`sessionCost`），按每次请求的模型/时间计价。
 - `@javenlu233/dsh-client-ui-turn-cost` — client 侧展示（底部累计 + 每消息「本轮」）。
