@@ -10,13 +10,16 @@
 
 ## 前置条件
 
-- 已登录 npm，且当前账号拥有 `@javenlu233` scope 的发布权限：
+- 已登录 **官方 npm**（`https://registry.npmjs.org`），且当前账号拥有 `@javenlu233` scope 的发布权限：
 
   ```bash
-  npm whoami
+  npm whoami --registry=https://registry.npmjs.org
   ```
 
+  本机安装源可以继续用镜像；发布目标由仓库 `.npmrc` 的 `publish-registry` 和各包 `publishConfig.registry` 固定为官网，不必再加 `--registry`。
+
 - 已安装 pnpm（发布必须用 `pnpm publish`，原因见文末「注意事项」）。
+  若账号开了 2FA，发布时加 `--otp=<验证码>`，或使用带 Bypass 2FA 的 granular token。
 
 ## 发布步骤
 

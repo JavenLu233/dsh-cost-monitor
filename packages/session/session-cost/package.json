@@ -3,7 +3,8 @@
   "description": "Configurable whole-log session cost projection (sessionCost): provider usage folded per route and per peak/off-peak period, priced by a per-model table",
   "version": "0.1.0",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
   "main": "lib/index.js",

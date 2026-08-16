@@ -3,7 +3,8 @@
   "description": "Session cost readout for Web: whole-session total in the composer stats strip plus a per-turn cost toggle in each assistant message's action row (pure-consumer client plugin)",
   "version": "0.1.0",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
   "main": "lib/index.js",

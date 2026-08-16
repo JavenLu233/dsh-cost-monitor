@@ -3,7 +3,8 @@
   "description": "Cost-display aggregate bundle: installs the session-cost host projection and the ui-turn-cost client readout in one `dsh plugin` add.",
   "version": "0.1.0",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
   "exports": {
