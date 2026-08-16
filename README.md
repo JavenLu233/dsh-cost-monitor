@@ -6,6 +6,39 @@ DeepSeek Harness (DSH) 费用展示插件，按真实场景通过 `dsh plugin` �
 - `@javenlu233/dsh-client-ui-turn-cost` — client 侧展示（底部累计 + 每消息「本轮」）。
 - `@javenlu233/dsh-cost-monitor` — 聚合包，一键装齐上面两个。
 
+## 安装（使用者）
+
+不需要克隆本仓库，也不用全局安装 `dsh`。装好 [Node.js](https://nodejs.org/) 后执行：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
+npx @deepseek-ai/dsh web
+```
+
+浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
+
+本机已有 `dsh` 命令时，把 `npx @deepseek-ai/dsh` 换成 `dsh` 即可。需要 DSH `0.1.0-rc.6` 及以上。
+
+卸载：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
+```
+
+更新（不必改版本号或 lockfile）：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web update
+```
+
+`add` 时写入的是 `^0.1.0` 这类范围，`update` 会在范围内升到最新（`0.1.1`、`0.1.2`…）。刚发布几分钟的版本有时会被 pnpm 的发布冷却拦住，这时指定版本再 add 一次即可：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@latest
+```
+
+更新后重启 `dsh web` 并强制刷新。
+
 ## 结构
 
 ```
@@ -39,7 +72,7 @@ node scripts/link-profile.mjs
 # 3. 用本地 link 装聚合包（把 <repo> 换成仓库根目录的绝对路径）
 dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
-# 4. 重启 dsh web + 硬刷新
+# 4. 重启 dsh web；打开页面后等几秒再强制刷新（Ctrl+Shift+R / Cmd+Shift+R）
 ```
 
 验证：`dsh --profile web --dump-config` 应出现 `# == @javenlu233/dsh-cost-monitor` 及
@@ -49,13 +82,7 @@ dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
 ## 发布
 
-包发布在 `@javenlu233` scope，步骤见 [PUBLISHING.md](./PUBLISHING.md)。发布后用户侧改用：
-
-```bash
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor
-```
-
-不再需要本地 `link:`。
+维护者发包步骤见 [PUBLISHING.md](./PUBLISHING.md)。用户侧安装见上文「安装（使用者）」，不再使用本地 `link:`。
 
 ## 已知限制
 

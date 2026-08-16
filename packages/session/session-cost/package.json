@@ -1,7 +1,7 @@
 {
   "name": "@javenlu233/dsh-session-cost",
   "description": "Configurable whole-log session cost projection (sessionCost): provider usage folded per route and per peak/off-peak period, priced by a per-model table",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

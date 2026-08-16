@@ -33,8 +33,10 @@ export type CostDockProps = { useProjection: UseProjection } & InjectFace<CostDo
  */
 export const CostDock = memo(function CostDock({ useProjection, useVisibility, setShowAll, t }: CostDockProps) {
   const cost = useProjection('sessionCost')
-  if (cost === undefined || cost.total <= 0) return null
+  // Must run on every render: a new session mounts this dock before any
+  // usage, then the same instance receives the first sessionCost frame.
   const showAll = useVisibility(value => value.showAll)
+  if (cost === undefined || cost.total <= 0) return null
   const miss = cost.uncachedInput.cost + cost.cacheWrite.cost
   const hit = cost.cacheRead.cost
   const output = cost.output.cost
