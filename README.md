@@ -1,6 +1,6 @@
 # dsh-cost-plugin
 
-DeepSeek Harness (DSH) 费用展示插件，按真实场景通过 `dsh plugin` 安装，不改 DSH 源码。
+DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用。
 
 ![费用展示：底部累计 + 每轮本轮费用](docs/demo.gif)
 
@@ -10,7 +10,7 @@ DeepSeek Harness (DSH) 费用展示插件，按真实场景通过 `dsh plugin` �
 
 ## 安装（使用者）
 
-不需要克隆本仓库，也不用全局安装 `dsh`。装好 [Node.js](https://nodejs.org/) 后执行：
+装好 [Node.js](https://nodejs.org/) 后执行：
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
@@ -41,7 +41,9 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@lates
 
 更新后重启 `dsh web` 并强制刷新。
 
-## 结构
+## 开发
+
+### 结构
 
 ```
 cost-plugin/
@@ -53,7 +55,7 @@ cost-plugin/
 ├─ package.json / pnpm-workspace.yaml / .npmrc
 ```
 
-## 构建
+### 构建
 
 ```bash
 pnpm install
@@ -62,7 +64,7 @@ pnpm build   # 或 pnpm -r build
 
 产物：`packages/*/*/lib/{index,invariant}.js` + `packages/client/ui-turn-cost/lib/client.js`。
 
-## 本地调试安装（不改 DSH 源码）
+### 本地调试安装（不改 DSH 源码）
 
 ```bash
 # 1. 构建
@@ -72,9 +74,11 @@ pnpm install && pnpm build
 node scripts/link-profile.mjs
 
 # 3. 用本地 link 装聚合包（把 <repo> 换成仓库根目录的绝对路径）
+# 如果是在 harness 仓库，改为 pnpm dsh ... 即可
 dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
 # 4. 重启 dsh web；打开页面后等几秒再强制刷新（Ctrl+Shift+R / Cmd+Shift+R）
+dsh web
 ```
 
 验证：`dsh --profile web --dump-config` 应出现 `# == @javenlu233/dsh-cost-monitor` 及
@@ -82,7 +86,7 @@ dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 
 卸载：`dsh plugin --profile web remove @javenlu233/dsh-cost-monitor`，再重启。
 
-## 发布
+### 发布
 
 维护者发包步骤见 [PUBLISHING.md](./PUBLISHING.md)。用户侧安装见上文「安装（使用者）」，不再使用本地 `link:`。
 
@@ -92,5 +96,5 @@ dsh plugin --profile web add "link:<repo>/packages/cost-monitor"
 `composer.dock` / `assistant-actions` 两个 slot。这些 API 来自 DSH 的 `@deepseek-ai/dsh-*`
 官方包；独立构建时它们作为 external 不打包、也不作为 devDependencies 安装（否则会拉取
 npm 上尚未发布的传递依赖），改为在 peerDependencies 中声明、由真实 `dsh web` 宿主提供。
-因此在「本地 link + 真实 dsh web」下可跑；发布到 npm 供他人安装时，需确认对方 DSH 版本
+因此在「本地 link + 真实 dsh web」下可跑；需确认DSH 版本
 已包含上述 API。
