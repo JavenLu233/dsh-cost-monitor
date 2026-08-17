@@ -1,5 +1,9 @@
 # dsh-cost-plugin
 
+[![npm version](https://img.shields.io/npm/v/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
+[![npm downloads](https://img.shields.io/npm/dm/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
+[![license](https://img.shields.io/npm/l/@javenlu233/dsh-cost-monitor.svg)](./LICENSE)
+
 DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话统计图。
 
 ![费用展示：底部累计 + 每轮本轮费用](docs/demo.gif)
