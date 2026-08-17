@@ -1,8 +1,12 @@
 # dsh-cost-plugin
 
 [![npm version](https://img.shields.io/npm/v/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
-[![npm downloads](https://img.shields.io/npm/dm/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
+[![npm total downloads](https://img.shields.io/npm/dt/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
 [![license](https://img.shields.io/npm/l/@javenlu233/dsh-cost-monitor.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.1.0--rc.6-black)](https://www.npmjs.com/package/@deepseek-ai/dsh)
 
 DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话统计图。
 
