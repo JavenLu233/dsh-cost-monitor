@@ -17,7 +17,8 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 ## 折叠语义
 
 - 与 token-meter 的 `tokenUsage` 折叠一致：usage chunk 提供早到样本（请求失败后仍保留），组装出的 `assistant/message` 会替换同 `turn`/`step` 的样本，chunk 与 message 不会重复计数。
-- `request/context` 是 last-wins 路由记录；样本归属到最新路由，无记录或路由无配置价时回退到 `defaultRoute`。
+- 辅助 DeepSeek `web_search` 用量从 Messages 响应捕获，写入不透明的 `tool/result.meta.sessionCost`，再累加进触发搜索的那一轮（不会替换会话主模型用量），并按搜索模型自身单价计价（通常是 `deepseek-v4-flash`）。
+- `request/context` 是会话主模型样本的 last-wins 路由记录；样本归属到最新路由，无记录或路由无配置价时回退到 `defaultRoute`。
 - 峰谷窗口为固定时区下的 `[start, end)` 小时区间（默认北京时间 9:00–12:00、14:00–18:00，偏移 +480 分钟）。
 - 各桶在首个贡献事件前为 0；`total` 为四桶费用之和，`cacheHitPercent` 为 `cacheRead / billedInput` 四舍五入取整，`billedInput` 为三个 prompt 侧桶之和。
 
@@ -53,14 +54,17 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 
 ## Model Experience
 
-无。该插件只计算已记录用量事件的客户端只读模型，不接触 prompt、message、schema、流或工具结果。
+会话主模型：无；那些是已经记入日志的用量事件。
+
+辅助 `web_search`：插件读取 harness 已经发出的 DeepSeek Messages 响应，把其中的 `usage` 记到 `tool/result` meta。不新增工具、不改搜索提示词、不改模型可见的工具结果文本。
 
 #### KV Cache effect
 
-无；该插件从不组装或发送 provider 请求。
+不影响会话请求。搜索调用若上报了缓存流量，会计入搜索分桶。
 
 ## Known Limitations and Deferred Work
 
 - **是估算，不是账单** —— 价格来自配置表，峰谷时段取各用量样本的事件时间（组装 message 的时间，而非请求开始时间），会话中途切换模型也只按 `request/context` 的分辨率计价，结果可能与 provider 账单有出入。
 - **仅累计总量** —— 折叠只发布整会话分桶，不提供按轮次/步骤的明细；按 (route, period) 的键结构为后续细分保留了扩展位。
 - **cache-write 由 provider 可选上报** —— DeepSeek 不上报 cache-write，因此其会话的缓存写桶恒为 0；该桶为上报此指标的 provider 保留。
+- **搜索 token 需要现场捕获** —— 本插件装上之前记下的会话，或未经过 `web_search` 工具、直接调用 `ctx.web.search` 的搜索，没有 `tool/result.meta.sessionCost`，无法补回 flash 搜索用量。

@@ -1,7 +1,8 @@
 /**
  * Session cost stats body: composition donut, per-turn trend, cache-savings
- * line, a per-model cut (always shown — a session may switch models), and a
- * schedule cut when more than one price window billed.
+ * line, a per-model cut (always shown — a session may switch models), a
+ * web_search model cut when any search usage was captured, and a schedule
+ * cut when more than one price window billed.
  * Priced host-side; this file only charts the `sessionCost` cuts.
  *
  * @author linqiya.1
@@ -37,6 +38,7 @@ export interface CostPanelProps {
 export function CostPanel({ cost, t }: CostPanelProps) {
   const series = cost.series ?? []
   const byRoute = cost.byRoute ?? []
+  const byWebSearch = cost.byWebSearch ?? []
   const bySchedule = cost.bySchedule
   const usedSchedules = bySchedule === undefined
     ? []
@@ -76,6 +78,16 @@ export function CostPanel({ cost, t }: CostPanelProps) {
           <h3 className={css.title}>{t('cost.byRoute')}</h3>
           <SliceBarList
             rows={byRoute.map(row => ({ key: row.route, label: row.route, slice: row }))}
+            currency={cost.currency}
+            t={t}
+          />
+        </section>
+      )}
+      {byWebSearch.length > 0 && (
+        <section className={css.section}>
+          <h3 className={css.title}>{t('cost.byWebSearch')}</h3>
+          <SliceBarList
+            rows={byWebSearch.map(row => ({ key: row.route, label: row.route, slice: row }))}
             currency={cost.currency}
             t={t}
           />

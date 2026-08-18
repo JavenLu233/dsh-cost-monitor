@@ -17,7 +17,8 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 ## Fold semantics
 
 - Mirrors token-meter's `tokenUsage` fold: a usage chunk provides an early sample that survives a later request failure, and an assembled `assistant/message` replaces that step's sample (same `turn`/`step`), so a chunk and its message never double count.
-- `request/context` is a last-wins route record; a sample attributes to the newest route, falling back to `defaultRoute` when none is recorded or a route has no configured price.
+- Auxiliary DeepSeek `web_search` usage is captured from the Messages response and attached as opaque `tool/result.meta.sessionCost`, then folded additively into the triggering turn (it never replaces conversation usage). It is priced at the search model's own rate (typically `deepseek-v4-flash`).
+- `request/context` is a last-wins route record for conversation samples; a sample attributes to the newest route, falling back to `defaultRoute` when none is recorded or a route has no configured price.
 - Peak windows are `[start, end)` hours in a fixed-offset timezone (default Beijing 9:00–12:00 and 14:00–18:00, +480 minutes).
 - Every bucket is 0 until its first contributing event; `total` sums the four bucket costs, `cacheHitPercent` is `cacheRead / billedInput` rounded to an integer, and `billedInput` sums the three prompt-side buckets.
 
@@ -53,14 +54,17 @@ Injects `sessionProjections` — the plugin's whole purpose; in assemblies witho
 
 ## Model Experience
 
-None, as the plugin only computes a client-facing read model of already-logged usage events and touches no prompt, message, schema, stream, or tool result.
+Conversation tokens: none; those are already-logged usage events.
+
+Auxiliary `web_search`: the plugin reads the existing DeepSeek Messages response (the harness already performs this call) and records its `usage` onto `tool/result` meta. It does not add tools, change the search prompt, or alter the model-visible tool result text.
 
 #### KV Cache effect
 
-None; the plugin never assembles or sends provider requests.
+None for conversation requests. Search-call cache traffic, when the provider reports it, is billed in the search cut.
 
 ## Known Limitations and Deferred Work
 
 - **Estimate, not an invoice** — prices come from the configured table, the peak period uses each usage sample's event time (the assembled-message time, not the request start), and a mid-session model switch is priced only to the resolution of `request/context`; the figure may differ from a provider bill.
 - **Cumulative totals only** — the fold publishes whole-session buckets, not a per-turn or per-step breakdown; the per-(route, period) keying keeps the door open for that later.
 - **Cache-write is provider-optional** — DeepSeek reports no cache-write, so its sessions show a zero cache-write bucket; the bucket exists for providers that do report it.
+- **Search tokens need a live capture** — sessions logged before this plugin, or `web_search` calls that never went through the `web_search` tool (direct `ctx.web.search`), have no `tool/result.meta.sessionCost` and cannot recover the flash search usage.

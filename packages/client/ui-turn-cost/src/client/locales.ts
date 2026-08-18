@@ -20,6 +20,7 @@ export type TurnCostKey =
   | 'cost.composition'
   | 'cost.trend'
   | 'cost.byRoute'
+  | 'cost.byWebSearch'
   | 'cost.bySchedule'
   | 'cost.cacheSaved'
   | 'cost.ifAllMiss'
@@ -60,6 +61,7 @@ export const zh: Record<TurnCostKey, string> = {
   'cost.composition': '构成',
   'cost.trend': '趋势',
   'cost.byRoute': '按模型',
+  'cost.byWebSearch': '搜索调用',
   'cost.bySchedule': '按价区',
   'cost.cacheSaved': '缓存节省 {cost}',
   'cost.ifAllMiss': '若全部未命中 {cost}',
@@ -94,6 +96,7 @@ export const en: Record<TurnCostKey, string> = {
   'cost.composition': 'Breakdown',
   'cost.trend': 'Trend',
   'cost.byRoute': 'By model',
+  'cost.byWebSearch': 'Web search',
   'cost.bySchedule': 'By schedule',
   'cost.cacheSaved': 'Cache saved {cost}',
   'cost.ifAllMiss': 'If all miss {cost}',

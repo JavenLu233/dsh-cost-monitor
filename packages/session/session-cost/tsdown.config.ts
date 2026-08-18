@@ -22,9 +22,11 @@ export default defineConfig({
     '@deepseek-ai/cordis',
     '@deepseek-ai/schemastery',
     'zod',
+    'node:async_hooks',
     '@deepseek-ai/dsh-llm',
     '@deepseek-ai/dsh-session',
     '@deepseek-ai/dsh-session-projection',
+    '@deepseek-ai/dsh-tools',
     '@deepseek-ai/dsh-invariants',
   ],
 })

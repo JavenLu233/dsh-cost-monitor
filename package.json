@@ -5,6 +5,7 @@
   "description": "DeepSeek Harness cost-display plugins: session-cost (host projection) + ui-turn-cost (client readout), plus a cost-monitor aggregate bundle for `dsh plugin --profile web add`.",
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @javenlu233/dsh-session-cost test"
   }
 }
