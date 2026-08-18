@@ -1,7 +1,7 @@
 {
   "name": "@javenlu233/dsh-client-ui-turn-cost",
   "description": "Session cost readout for Web: whole-session total in the composer stats strip plus a per-turn cost toggle in each assistant message's action row (pure-consumer client plugin)",
-  "version": "0.1.3-beta.0",
+  "version": "0.1.3",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

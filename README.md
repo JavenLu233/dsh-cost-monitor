@@ -23,11 +23,11 @@ DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话�
 装好 [Node.js](https://nodejs.org/) 后执行：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2 # 此处的版本号随每次正式发布更新
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3 # 此处的版本号随每次正式发布更新
 npx @deepseek-ai/dsh web
 ```
 
-> 这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.2` 会被跳过，实际装上的可能是更早的 `0.1.0`。钉死后装的就是这一版。
+> 这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.3` 会被跳过，实际装上的可能是更早的版本。钉死后装的就是这一版。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -37,6 +37,24 @@ npx @deepseek-ai/dsh web
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
+```
+
+### 更新到最新版
+
+必须先卸掉旧版，再钉死安装段里的正式号；不要用裸包名或 `@latest`（冷却原因同上）：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
+```
+
+然后重启 `dsh web`，再强制刷新。
+
+查当前装了哪一版、npm 上最新正式号：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web list
+npm view @javenlu233/dsh-cost-monitor version
 ```
 
 ## 历史会话
@@ -170,7 +188,7 @@ beta 验证通过后开 PR，合进 `main`。不要在合入前发正式包。
 
 #### 4. 发正式包
 
-在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.2`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.2` 改成新号。
+在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.3`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.3` 改成新号。
 
 ```bash
 pnpm build
@@ -180,10 +198,11 @@ cd packages/client/ui-turn-cost && pnpm publish --no-git-checks && cd ../../..
 cd packages/cost-monitor && pnpm publish --no-git-checks && cd ../..
 ```
 
-验证安装用同一钉死版本：
+验证安装用同一钉死版本（先卸再装）：
 
 ```bash
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
+dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
 ```
 
 重启并强制刷新。

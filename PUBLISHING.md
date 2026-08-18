@@ -75,7 +75,7 @@ npm view @javenlu233/dsh-cost-monitor version
 
 ```bash
 # 装聚合包（钉死版本，与 README 安装段一致）
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
 
 # 确认配置层已挂载
 npx @deepseek-ai/dsh --profile web --dump-config
