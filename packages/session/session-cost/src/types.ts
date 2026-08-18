@@ -67,8 +67,9 @@ export type PriceSchedule = 'flat' | 'peak' | 'offPeak'
  * currency labels the configured unit and `total` is the sum of the four
  * bucket costs. `turns` carries the same split per turn number, so a
  * per-message readout can show "this turn" without any client-side pricing.
- * `series` / `byRoute` / `bySchedule` / `cacheSaved` are the chart cuts of the
- * same cube (turn × route × schedule); they do not change fold state.
+ * `series` / `byRoute` / `byWebSearch` / `bySchedule` / `cacheSaved` are the
+ * chart cuts of the same cube (turn × route × schedule × purpose); they do
+ * not change fold state.
  */
 export interface SessionCostProjection {
   /** Currency label the configured prices are denominated in (e.g. `CNY`). */
@@ -93,6 +94,11 @@ export interface SessionCostProjection {
   series: TurnCostSlice[]
   /** Per-model tokens and cost, ordered by cost descending. */
   byRoute: RouteCostSlice[]
+  /**
+   * Auxiliary `web_search` model calls only, ordered by cost descending.
+   * Empty when the log has no captured search usage.
+   */
+  byWebSearch: RouteCostSlice[]
   /** Flat / peak / off-peak cuts; unused schedules stay a zero slice. */
   bySchedule: Record<PriceSchedule, CostSlice>
   /** Cost avoided by cache reads versus billing those tokens at the miss rate. */

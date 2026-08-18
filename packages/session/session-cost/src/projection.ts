@@ -12,7 +12,9 @@
  * `view`, never stored in state, so re-pricing a folded log after a config
  * change needs no re-fold; the schedule and switchover are fold input, so
  * changing them bumps {@link stateVersion}. Chart cuts (`series`, `byRoute`,
- * `bySchedule`, `cacheSaved`) are assembled in `view` from the same cube.
+ * `byWebSearch`, `bySchedule`, `cacheSaved`) are assembled in `view` from the
+ * same cube. Auxiliary `web_search` usage rides `tool/result.meta.sessionCost`
+ * and is additive — it never participates in the chunk → message replace.
  *
  * @module @javenlu233/dsh-session-cost/projection
  */
@@ -22,7 +24,11 @@ import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { ZERO_BUCKET_PRICES } from './pricing.ts'
 import type { BucketPrices, CostConfig } from './pricing.ts'
+import { searchCostFromMeta } from './search-usage.ts'
 import type { CostSlice, PriceSchedule, SessionCostProjection, TurnCost } from './types.ts'
+
+/** Why a usage sample was billed: the conversation route, or an auxiliary search call. */
+type CostPurpose = 'conversation' | 'web_search'
 
 /** Token buckets of one usage sample (mirrors token-meter's disjoint buckets). */
 interface CostBuckets {
@@ -35,12 +41,12 @@ interface CostBuckets {
 /** Price bucket of one usage sample: flat before the switchover, peak/off-peak after. */
 export type PriceBucket = 'flat' | 'peak' | 'offPeak'
 
-/** Separator joining turn, route, and bucket in a state key (never a model id). */
+/** Separator joining turn, route, bucket, and purpose in a state key (never a model id). */
 const ROUTE_SEPARATOR = '\u0000'
 
-/** Fold state: raw token buckets per (turn, route, bucket) key, plus replace bookkeeping. */
+/** Fold state: raw token buckets per (turn, route, bucket, purpose) key, plus replace bookkeeping. */
 interface SessionCostState {
-  /** Token buckets keyed by `turn\u0000route\u0000bucket`. */
+  /** Token buckets keyed by `turn\u0000route\u0000bucket\u0000purpose`. */
   byKey: Record<string, CostBuckets>
   /** Newest recorded route (from `request/context`); seeded with the configured default. */
   route: string
@@ -55,7 +61,12 @@ const zeroBuckets = (): CostBuckets => ({
   cacheWriteTokens: 0,
 })
 
-const bucketsFrom = (usage: TokenUsage): CostBuckets => ({
+const bucketsFrom = (usage: {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
+}): CostBuckets => ({
   uncachedInputTokens: usage.inputTokens,
   outputTokens: usage.outputTokens,
   cacheReadTokens: usage.cacheReadTokens ?? 0,
@@ -74,16 +85,23 @@ const allZero = (buckets: CostBuckets): boolean =>
   && buckets.cacheReadTokens === 0
   && buckets.cacheWriteTokens === 0
 
-const keyOf = (turn: number, route: string, bucket: PriceBucket): string =>
-  `${turn}${ROUTE_SEPARATOR}${route}${ROUTE_SEPARATOR}${bucket}`
+const keyOf = (turn: number, route: string, bucket: PriceBucket, purpose: CostPurpose): string =>
+  `${turn}${ROUTE_SEPARATOR}${route}${ROUTE_SEPARATOR}${bucket}${ROUTE_SEPARATOR}${purpose}`
 
-const splitKey = (key: string): { turn: number; route: string; bucket: PriceBucket } => {
+const splitKey = (key: string): {
+  turn: number
+  route: string
+  bucket: PriceBucket
+  purpose: CostPurpose
+} => {
   const first = key.indexOf(ROUTE_SEPARATOR)
   const second = key.indexOf(ROUTE_SEPARATOR, first + 1)
+  const third = key.indexOf(ROUTE_SEPARATOR, second + 1)
   return {
     turn: Number(key.slice(0, first)),
     route: key.slice(first + 1, second),
-    bucket: key.slice(second + 1) as PriceBucket,
+    bucket: key.slice(second + 1, third) as PriceBucket,
+    purpose: key.slice(third + 1) === 'web_search' ? 'web_search' : 'conversation',
   }
 }
 
@@ -141,6 +159,7 @@ const sessionCostSchema = z.object({
   turns: z.record(z.string(), turnCostSchema),
   series: z.array(costSliceSchema.extend({ turn: z.number().int() }).strict()),
   byRoute: z.array(costSliceSchema.extend({ route: z.string() }).strict()),
+  byWebSearch: z.array(costSliceSchema.extend({ route: z.string() }).strict()),
   bySchedule: z.object({
     flat: costSliceSchema,
     peak: costSliceSchema,
@@ -211,6 +230,7 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
   const turns: Record<number, TurnCost> = {}
   const byTurn = new Map<number, CostSlice>()
   const byRoute = new Map<string, CostSlice>()
+  const byWebSearch = new Map<string, CostSlice>()
   const bySchedule: Record<PriceSchedule, CostSlice> = {
     flat: zeroSlice(),
     peak: zeroSlice(),
@@ -222,7 +242,7 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
     totals.outputTokens += buckets.outputTokens
     totals.cacheReadTokens += buckets.cacheReadTokens
     totals.cacheWriteTokens += buckets.cacheWriteTokens
-    const { turn, route, bucket } = splitKey(key)
+    const { turn, route, bucket, purpose } = splitKey(key)
     const price = bucketPriceFor(config, route, bucket)
     const priced = {
       uncachedInput: buckets.uncachedInputTokens / 1_000_000 * price.uncachedInput,
@@ -242,6 +262,7 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
     turns[turn] = turnCost
     addPriced(takeSlice(byTurn, turn), buckets, priced)
     addPriced(takeSlice(byRoute, route), buckets, priced)
+    if (purpose === 'web_search') addPriced(takeSlice(byWebSearch, route), buckets, priced)
     addPriced(bySchedule[bucket], buckets, priced)
     cacheSaved += buckets.cacheReadTokens / 1_000_000 * (price.uncachedInput - price.cacheRead)
   }
@@ -262,6 +283,9 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
       .sort((left, right) => left[0] - right[0])
       .map(([turn, slice]) => ({ turn, ...slice })),
     byRoute: [...byRoute.entries()]
+      .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
+      .map(([route, slice]) => ({ route, ...slice })),
+    byWebSearch: [...byWebSearch.entries()]
       .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
       .map(([route, slice]) => ({ route, ...slice })),
     bySchedule,
@@ -288,6 +312,19 @@ export function sessionCostProjectionDefinition(config: CostConfig): ProjectionD
         if (route === state.route) return state
         return { ...state, route }
       }
+      if (event.type === 'tool/result') {
+        const data = event.data as { turn?: unknown; meta?: unknown }
+        if (typeof data.turn !== 'number') return state
+        const sample = searchCostFromMeta(data.meta)
+        if (sample === undefined) return state
+        const buckets = bucketsFrom(sample)
+        if (allZero(buckets)) return state
+        const route = sample.model
+        const key = keyOf(data.turn, route, classifyBucket(event.time, config), 'web_search')
+        const byKey = addToKey(state.byKey, key, undefined, buckets)
+        if (byKey === state.byKey) return state
+        return { ...state, byKey }
+      }
       let turn: number
       let step: number
       let usage: TokenUsage
@@ -300,7 +337,7 @@ export function sessionCostProjectionDefinition(config: CostConfig): ProjectionD
         return state
       }
       const buckets = bucketsFrom(usage)
-      const key = keyOf(turn, state.route, classifyBucket(event.time, config))
+      const key = keyOf(turn, state.route, classifyBucket(event.time, config), 'conversation')
       const previous = state.last !== null && state.last.turn === turn && state.last.step === step
         ? state.last
         : undefined
@@ -311,6 +348,6 @@ export function sessionCostProjectionDefinition(config: CostConfig): ProjectionD
       return { ...state, byKey, last: { turn, step, key, buckets } }
     },
     view: state => viewSessionCost(state, config),
-    stateVersion: 3,
+    stateVersion: 4,
   }
 }

@@ -190,7 +190,7 @@ dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.2
 
 ## 已知限制
 
-显示值是估算：峰谷用 message 组装时间而非请求开始时间，换模型只按 `request/context` 的粒度，可能和 provider 账单不一致。
+显示值是估算：峰谷用 message 组装时间而非请求开始时间，换模型只按 `request/context` 的粒度，可能和 provider 账单不一致。`web_search` 触发的 flash 总结用量会计入本轮和统计图的「搜索调用」栏；装插件之前的旧会话补不上这一笔。
 
 `dsh-session-cost` 依赖 host 的 `sessionProjections` 投影服务、`ui-turn-cost` 依赖
 `composer.dock` / `assistant-actions` 两个 slot。这些 API 来自 DSH 的 `@deepseek-ai/dsh-*`

@@ -4,7 +4,8 @@
  * per-model, peak/off-peak table, served through the session-projection seam
  * (registry snapshot, change feed, and every projection carrier), so clients
  * render full-session figures that paging and compaction cannot change. The
- * plugin owns only the fold and the pricing table; delivery is the seam's.
+ * plugin also captures auxiliary DeepSeek `web_search` Messages usage (the
+ * harness logs the request but not the tokens) onto `tool/result.meta`.
  *
  * @module @javenlu233/dsh-session-cost
  */
@@ -13,6 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { DEFAULT_COST_CONFIG, DEFAULT_PRICES } from './pricing.ts'
 import type { CostConfig } from './pricing.ts'
+import { installSearchCostCapture } from './capture.ts'
 import { sessionCostProjectionDefinition } from './projection.ts'
 
 export type { BucketPrices, RoutePrices } from './pricing.ts'
@@ -54,4 +56,5 @@ export const Config = z.object({
  */
 export function apply(ctx: Context, config: Config): void {
   ctx.sessionProjections.register(sessionCostProjectionDefinition(config))
+  installSearchCostCapture(ctx)
 }

@@ -17,10 +17,11 @@ export const inject = ['invariants']
 /**
  * No runtime invariant: the package owns a single pure projection fold whose
  * wire payload is schema-validated by the projection registry at every
- * snapshot and change-feed emission, and the event relations the fold relies
- * on (`request/context` records the route before that route's usage reports,
- * usage buckets are disjoint) are owned by dsh-agent-loop and dsh-token-meter,
- * not here.
+ * snapshot and change-feed emission. Conversation usage relations
+ * (`request/context` before that route's usage reports, usage buckets
+ * disjoint) are owned by dsh-agent-loop and dsh-token-meter. Auxiliary
+ * web_search usage is attached as opaque `tool/result` meta and folded
+ * additively, so it cannot replace a conversation sample.
  */
 const install: InvariantInstaller = () => {}
 
