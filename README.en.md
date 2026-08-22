@@ -29,7 +29,7 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
 npx @deepseek-ai/dsh web
 ```
 
-> Pin the version: the DSH web profile cools new npm packages for 24 hours. Bare names or `@latest` may skip a just-published `0.1.4` and install an older build.
+> `dsh plugin` forwards to pnpm in the profile directory. pnpm 11 defaults `minimumReleaseAge` to about 24 hours: a bare name or `@latest` may silently install an older build. Pin the release you want (e.g. `@0.1.4`). If it still will not resolve, wait out the 24 hours, or add the package version under `minimumReleaseAgeExclude` in `~/.dsh/profiles/web/pnpm-workspace.yaml` (or set `minimumReleaseAge: 0` to disable the cooldown).
 
 After the browser opens, wait a few seconds and hard-refresh (Windows / Linux: `Ctrl+Shift+R`, macOS: `Cmd+Shift+R`). You should see the session total at the bottom and a cost control on each assistant message. If not, restart `dsh web` and hard-refresh again.
 
@@ -43,7 +43,7 @@ npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 
 ### Update to the latest release
 
-Remove the old install, then add the pinned release from the install section above. Do not use a bare name or `@latest` (same cooldown reason):
+Remove the old install, then add the pinned release from the install section above. Do not use a bare name or `@latest` (same pnpm cooldown):
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
@@ -191,7 +191,7 @@ dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta
 ```
 
-Use `@beta` or the full prerelease. Do not use a bare name or `@latest`. Restart `dsh web` and hard-refresh.
+Use `@beta` or the full prerelease. Do not use a bare name or `@latest` (pnpm cooldown; see Install above). Restart `dsh web` and hard-refresh.
 
 #### 3. PR into main
 

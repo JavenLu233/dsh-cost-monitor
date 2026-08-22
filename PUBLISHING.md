@@ -73,6 +73,8 @@ npm view @javenlu233/dsh-cost-monitor version
 
 ## npx 场景安装验证
 
+刚发完的版本受 pnpm 11 默认约 24 小时 `minimumReleaseAge` 约束：裸包名 / `@latest` 可能仍解析到旧版。验证时请钉死版本；若立刻装不上，在 profile 的 `pnpm-workspace.yaml` 里把本次三个包版本写入 `minimumReleaseAgeExclude`（或临时 `minimumReleaseAge: 0`）。说明见 [README.md](./README.md)「安装」。
+
 ```bash
 # 装聚合包（钉死版本，与 README 安装段一致）
 npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4

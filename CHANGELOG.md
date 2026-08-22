@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 安装说明更正：24 小时冷却来自 pnpm 11 默认 `minimumReleaseAge`，不是 DSH web profile；钉死版本仍可能需等待或写入 `minimumReleaseAgeExclude`。
+
 ## [0.1.4] - 2026-08-22
 
 ### Changed

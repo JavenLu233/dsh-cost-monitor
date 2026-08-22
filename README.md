@@ -29,7 +29,7 @@ npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
 npx @deepseek-ai/dsh web
 ```
 
-> 这里写死版本，是因为 DSH web profile 对 npm 新包有 24 小时冷却：不写版本或写 `@latest` 时，刚发布的 `0.1.4` 会被跳过，实际装上的可能是更早的版本。钉死后装的就是这一版。
+> `dsh plugin` 在 profile 目录里转发到 pnpm。pnpm 11 默认 `minimumReleaseAge` 为约 24 小时：裸包名或 `@latest` 可能静默装上更早的版本。刚发布的号请钉死（如 `@0.1.4`）；若仍装不上，等满 24 小时，或在 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里加上对应包版本（也可设 `minimumReleaseAge: 0` 关闭冷却）。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -43,7 +43,7 @@ npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 
 ### 更新到最新版
 
-必须先卸掉旧版，再钉死安装段里的正式号；不要用裸包名或 `@latest`（冷却原因同上）：
+必须先卸掉旧版，再钉死安装段里的正式号；不要用裸包名或 `@latest`（pnpm 冷却原因同上）：
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
@@ -191,7 +191,7 @@ dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta
 ```
 
-必须写 `@beta` 或完整预发布号。不要用裸包名或 `@latest`（冷却原因见上文「安装」）。重启 `dsh web` 并强制刷新。
+必须写 `@beta` 或完整预发布号。不要用裸包名或 `@latest`（pnpm 冷却原因见上文「安装」）。重启 `dsh web` 并强制刷新。
 
 #### 3. PR 合进 main
 
