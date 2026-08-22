@@ -25,7 +25,7 @@
 
 **发布顺序不能反**：`cost-monitor` 依赖前两个包，必须先发 `session-cost`、`ui-turn-cost`，最后发 `cost-monitor`。
 
-日常流程是：本地 `link:` 调通 → 发 **beta**（`--tag beta`）→ PR 合进 `main` → 再发正式包。完整说明见仓库 [README.md](./README.md) 的「发布流程」。
+日常流程是：本地 `link:` 调通 → 发 **beta**（`--tag beta`）→ PR 合进 `main` → 再发正式包。完整说明见仓库 [README.md](./README.md) 的「发布流程」。发版前把 [CHANGELOG.md](./CHANGELOG.md) 里 `Unreleased` 的条目挪到新版本标题下并写上日期。
 
 ### 正式包（`latest`）
 

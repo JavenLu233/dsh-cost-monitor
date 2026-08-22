@@ -30,28 +30,45 @@ import type { CostSlice, PriceSchedule, SessionCostProjection, TurnCost } from '
 /** Why a usage sample was billed: the conversation route, or an auxiliary search call. */
 type CostPurpose = 'conversation' | 'web_search'
 
-/** Token buckets of one usage sample (mirrors token-meter's disjoint buckets). */
-interface CostBuckets {
-  uncachedInputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
-}
-
 /** Price bucket of one usage sample: flat before the switchover, peak/off-peak after. */
 export type PriceBucket = 'flat' | 'peak' | 'offPeak'
 
 /** Separator joining turn, route, bucket, and purpose in a state key (never a model id). */
 const ROUTE_SEPARATOR = '\u0000'
 
-/** Fold state: raw token buckets per (turn, route, bucket, purpose) key, plus replace bookkeeping. */
-interface SessionCostState {
-  /** Token buckets keyed by `turn\u0000route\u0000bucket\u0000purpose`. */
-  byKey: Record<string, CostBuckets>
-  /** Newest recorded route (from `request/context`); seeded with the configured default. */
-  route: string
-  /** Last usage sample, for the chunk → message replace semantics. */
-  last: { turn: number; step: number; key: string; buckets: CostBuckets } | null
+/** One sample's four disjoint token buckets (validated on persisted-cache restore). */
+const costBucketsSchema = z.object({
+  uncachedInputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cacheReadTokens: z.number().int().nonnegative(),
+  cacheWriteTokens: z.number().int().nonnegative(),
+}).strict()
+
+/** Token buckets of one usage sample (mirrors token-meter's disjoint buckets). */
+type CostBuckets = z.infer<typeof costBucketsSchema>
+
+/**
+ * Fold state schema: raw token buckets per (turn, route, bucket, purpose) key,
+ * plus replace bookkeeping. Validated before a cache row seeds a fold.
+ */
+const sessionCostStateSchema = z.object({
+  byKey: z.record(z.string(), costBucketsSchema),
+  route: z.string(),
+  last: z.object({
+    turn: z.number().int().nonnegative(),
+    step: z.number().int().nonnegative(),
+    key: z.string(),
+    buckets: costBucketsSchema,
+  }).nullable(),
+}).strict()
+
+/** Fold state: raw token buckets per key, plus replace bookkeeping. */
+type SessionCostState = z.infer<typeof sessionCostStateSchema>
+
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    sessionCost: SessionCostState
+  }
 }
 
 const zeroBuckets = (): CostBuckets => ({
@@ -301,11 +318,11 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
  * @param config - the plugin's validated pricing config.
  * @returns the definition the plugin registers on `ctx.sessionProjections`.
  */
-export function sessionCostProjectionDefinition(config: CostConfig): ProjectionDefinition<'sessionCost', SessionCostState> {
+export function sessionCostProjectionDefinition(config: CostConfig) {
   return {
-    key: 'sessionCost',
-    schema: sessionCostSchema,
-    init: () => ({ byKey: {}, route: config.defaultRoute, last: null }),
+    key: 'sessionCost' as const,
+    stateSchema: sessionCostStateSchema,
+    init: (): SessionCostState => ({ byKey: {}, route: config.defaultRoute, last: null }),
     apply: (state, event) => {
       if (event.type === 'request/context') {
         const route = event.data.model
@@ -347,7 +364,10 @@ export function sessionCostProjectionDefinition(config: CostConfig): ProjectionD
       byKey = addToKey(byKey, key, undefined, buckets)
       return { ...state, byKey, last: { turn, step, key, buckets } }
     },
-    view: state => viewSessionCost(state, config),
+    wire: {
+      viewSchema: sessionCostSchema,
+      view: state => viewSessionCost(state, config),
+    },
     stateVersion: 4,
-  }
+  } satisfies ProjectionDefinition<'sessionCost', SessionCostState>
 }

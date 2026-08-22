@@ -55,6 +55,13 @@ const FLASH: RoutePrices = {
   offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 },
 }
 
+/**
+ * DeepSeek v4-flash-vision-exp: same published peak/off-peak rates as flash.
+ * Flat mirrors flash for the shared pre-2026-08-17 schedule; the model shipped
+ * after that switchover, so live usage always hits peak/offPeak.
+ */
+const FLASH_VISION: RoutePrices = FLASH
+
 /** DeepSeek v4-pro prices (CNY per 1M tokens). */
 const PRO: RoutePrices = {
   flat: { cacheRead: 0.025, uncachedInput: 3, cacheWrite: 3, output: 6 },
@@ -65,6 +72,7 @@ const PRO: RoutePrices = {
 /** Default per-model price table keyed by provider-owned model id. */
 export const DEFAULT_PRICES: Record<string, RoutePrices> = {
   'deepseek-v4-flash': FLASH,
+  'deepseek-v4-flash-vision-exp': FLASH_VISION,
   'deepseek-v4-pro': PRO,
 }
 

@@ -1,12 +1,14 @@
 # dsh-cost-plugin
 
+中文 | [English](README.en.md)
+
 [![npm version](https://img.shields.io/npm/v/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
 [![npm total downloads](https://img.shields.io/npm/dt/@javenlu233/dsh-cost-monitor.svg)](https://www.npmjs.com/package/@javenlu233/dsh-cost-monitor)
 [![license](https://img.shields.io/npm/l/@javenlu233/dsh-cost-monitor.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
-[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.1.0--rc.6-black)](https://www.npmjs.com/package/@deepseek-ai/dsh)
+[![DSH](https://img.shields.io/badge/DSH-%3E%3D0.1.1--rc.1-black)](https://www.npmjs.com/package/@deepseek-ai/dsh)
 
 DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话统计图。
 
@@ -31,7 +33,7 @@ npx @deepseek-ai/dsh web
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
-本机已有 `dsh` 命令时，把 `npx @deepseek-ai/dsh` 换成 `dsh` 即可。需要 DSH `0.1.0-rc.6` 及以上。
+本机已有 `dsh` 命令时，把 `npx @deepseek-ai/dsh` 换成 `dsh` 即可。需要 DSH `0.1.1-rc.1` 及以上（含 `session-projection` 的 `stateSchema` / `wire` 契约）。
 
 卸载：
 
@@ -74,9 +76,14 @@ npm view @javenlu233/dsh-cost-monitor version
 | `deepseek-v4-flash` | 平价（涨价前） | 0.02 | 1 | 1 | 2 |
 | | 峰时 | 0.10 | 3 | 3 | 9 |
 | | 谷时 | 0.05 | 1.5 | 1.5 | 4.5 |
+| `deepseek-v4-flash-vision-exp` | 平价（涨价前） | 0.02 | 1 | 1 | 2 |
+| | 峰时 | 0.10 | 3 | 3 | 9 |
+| | 谷时 | 0.05 | 1.5 | 1.5 | 4.5 |
 | `deepseek-v4-pro` | 平价（涨价前） | 0.025 | 3 | 3 | 6 |
 | | 峰时 | 0.30 | 9 | 9 | 27 |
 | | 谷时 | 0.15 | 4.5 | 4.5 | 13.5 |
+
+`deepseek-v4-flash-vision-exp` 与 flash 公布单价相同；图片按尺寸折成 token 后计入 API 回报的 input 用量，插件不单独做分辨率换算。
 
 ### 自定义价格
 
@@ -93,6 +100,10 @@ npm view @javenlu233/dsh-cost-monitor version
     timezoneOffsetMinutes: 480
     prices:
       deepseek-v4-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
+        peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+      deepseek-v4-flash-vision-exp:
         flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
         peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
@@ -209,14 +220,16 @@ dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
 
 ## 已知限制
 
-显示值是估算：峰谷用 message 组装时间而非请求开始时间，换模型只按 `request/context` 的粒度，可能和 provider 账单不一致。`web_search` 触发的 flash 总结用量会计入本轮和统计图的「搜索调用」栏；装插件之前的旧会话补不上这一笔。
+显示值是估算：峰谷用 message 组装时间而非请求开始时间，换模型只按 `request/context` 的粒度，可能和 provider 账单不一致。`web_search` 触发的 flash 总结用量会计入本轮和统计图的「搜索调用」栏；装插件之前的旧会话补不上这一笔。Vision 模型的图片费用依赖 API 回报的 usage（图片已折成 input tokens），插件不按分辨率重算。
 
 `dsh-session-cost` 依赖 host 的 `sessionProjections` 投影服务、`ui-turn-cost` 依赖
 `composer.dock` / `assistant-actions` 两个 slot。这些 API 来自 DSH 的 `@deepseek-ai/dsh-*`
 官方包；独立构建时它们作为 external 不打包、也不作为 devDependencies 安装（否则会拉取
 npm 上尚未发布的传递依赖），改为在 peerDependencies 中声明、由真实 `dsh web` 宿主提供。
-因此在「本地 link + 真实 dsh web」下可跑；需确认DSH 版本
-已包含上述 API。
+因此在「本地 link + 真实 dsh web」下可跑；需确认 DSH 版本已包含上述 API，且
+`session-projection` 为 `stateSchema` + `wire` 契约（约 `0.1.1-rc.1` 起）。
+
+版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## License
 

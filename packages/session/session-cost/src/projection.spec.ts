@@ -14,7 +14,7 @@ const event = (type: string, data: unknown, time = PEAK): Event =>
 
 const fold = (...events: Event[]) => {
   const unit = sessionCostProjectionDefinition(DEFAULT_COST_CONFIG)
-  return unit.view(events.reduce<ReturnType<typeof unit.init>>(
+  return unit.wire!.view(events.reduce<ReturnType<typeof unit.init>>(
     (state, next) => unit.apply(state, next),
     unit.init(),
   ))
