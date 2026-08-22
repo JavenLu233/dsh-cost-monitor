@@ -43,6 +43,9 @@ All config fields default to the DeepSeek peak/off-peak table; override any fiel
       deepseek-v4-flash:
         peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+      deepseek-v4-flash-vision-exp:
+        peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
       deepseek-v4-pro:
         peak: { cacheRead: 0.30, uncachedInput: 9.0, cacheWrite: 9.0, output: 27.0 }
         offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }

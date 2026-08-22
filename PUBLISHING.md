@@ -25,7 +25,7 @@
 
 **发布顺序不能反**：`cost-monitor` 依赖前两个包，必须先发 `session-cost`、`ui-turn-cost`，最后发 `cost-monitor`。
 
-日常流程是：本地 `link:` 调通 → 发 **beta**（`--tag beta`）→ PR 合进 `main` → 再发正式包。完整说明见仓库 [README.md](./README.md) 的「发布流程」。
+日常流程是：本地 `link:` 调通 → 发 **beta**（`--tag beta`）→ PR 合进 `main` → 再发正式包。完整说明见仓库 [README.md](./README.md) 的「发布流程」。发版前把 [CHANGELOG.md](./CHANGELOG.md) 里 `Unreleased` 的条目挪到新版本标题下并写上日期。
 
 ### 正式包（`latest`）
 
@@ -73,9 +73,11 @@ npm view @javenlu233/dsh-cost-monitor version
 
 ## npx 场景安装验证
 
+刚发完的版本受 pnpm 11 默认约 24 小时 `minimumReleaseAge` 约束：裸包名 / `@latest` 可能仍解析到旧版。验证时请钉死版本；若立刻装不上，在 profile 的 `pnpm-workspace.yaml` 里把本次三个包版本写入 `minimumReleaseAgeExclude`（或临时 `minimumReleaseAge: 0`）。说明见 [README.md](./README.md)「安装」。
+
 ```bash
 # 装聚合包（钉死版本，与 README 安装段一致）
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
 
 # 确认配置层已挂载
 npx @deepseek-ai/dsh --profile web --dump-config
