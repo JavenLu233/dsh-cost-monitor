@@ -25,11 +25,11 @@ DeepSeek Harness (DSH) cost display plugin: session total in the composer dock, 
 With [Node.js](https://nodejs.org/) installed:
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3 # pin the release you want
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4 # pin the release you want
 npx @deepseek-ai/dsh web
 ```
 
-> Pin the version: the DSH web profile cools new npm packages for 24 hours. Bare names or `@latest` may skip a just-published `0.1.3` and install an older build.
+> Pin the version: the DSH web profile cools new npm packages for 24 hours. Bare names or `@latest` may skip a just-published `0.1.4` and install an older build.
 
 After the browser opens, wait a few seconds and hard-refresh (Windows / Linux: `Ctrl+Shift+R`, macOS: `Cmd+Shift+R`). You should see the session total at the bottom and a cost control on each assistant message. If not, restart `dsh web` and hard-refresh again.
 
@@ -47,7 +47,7 @@ Remove the old install, then add the pinned release from the install section abo
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
 ```
 
 Restart `dsh web` and hard-refresh.
@@ -199,7 +199,7 @@ After beta checks out, open a PR and merge to `main`. Do not publish the release
 
 #### 4. Publish the release
 
-On `main`, set all three `version` fields to the release (e.g. `0.1.3`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Then update the pinned `@0.1.3` in the install section above.
+On `main`, set all three `version` fields to the release (e.g. `0.1.4`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Then update the pinned `@0.1.4` in the install section above.
 
 ```bash
 pnpm build
@@ -213,7 +213,7 @@ Verify with the same pinned version (remove, then add):
 
 ```bash
 dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.3
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
 ```
 
 Restart and hard-refresh.
