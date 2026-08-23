@@ -25,11 +25,11 @@ DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话�
 装好 [Node.js](https://nodejs.org/) 后执行：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4 # 此处的版本号随每次正式发布更新
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5 # 此处的版本号随每次正式发布更新
 npx @deepseek-ai/dsh web
 ```
 
-> `dsh plugin` 在 profile 目录里转发到 pnpm。pnpm 11 默认 `minimumReleaseAge` 为约 24 小时：裸包名或 `@latest` 可能静默装上更早的版本。刚发布的号请钉死（如 `@0.1.4`）；若仍装不上，等满 24 小时，或在 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里加上对应包版本（也可设 `minimumReleaseAge: 0` 关闭冷却）。
+> `dsh plugin` 在 profile 目录里转发到 pnpm。pnpm 11 默认 `minimumReleaseAge` 为约 24 小时：裸包名或 `@latest` 可能静默装上更早的版本。刚发布的号请钉死（如 `@0.1.5`）；若仍装不上，等满 24 小时，或在 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里加上对应包版本（也可设 `minimumReleaseAge: 0` 关闭冷却）。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -47,7 +47,7 @@ npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
 ```
 
 然后重启 `dsh web`，再强制刷新。
@@ -199,7 +199,7 @@ beta 验证通过后开 PR，合进 `main`。不要在合入前发正式包。
 
 #### 4. 发正式包
 
-在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.4`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.4` 改成新号。
+在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.4`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.5` 改成新号。
 
 ```bash
 pnpm build
@@ -213,7 +213,7 @@ cd packages/cost-monitor && pnpm publish --no-git-checks && cd ../..
 
 ```bash
 dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
 ```
 
 重启并强制刷新。

@@ -25,11 +25,11 @@ DeepSeek Harness (DSH) cost display plugin: session total in the composer dock, 
 With [Node.js](https://nodejs.org/) installed:
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4 # pin the release you want
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5 # pin the release you want
 npx @deepseek-ai/dsh web
 ```
 
-> `dsh plugin` forwards to pnpm in the profile directory. pnpm 11 defaults `minimumReleaseAge` to about 24 hours: a bare name or `@latest` may silently install an older build. Pin the release you want (e.g. `@0.1.4`). If it still will not resolve, wait out the 24 hours, or add the package version under `minimumReleaseAgeExclude` in `~/.dsh/profiles/web/pnpm-workspace.yaml` (or set `minimumReleaseAge: 0` to disable the cooldown).
+> `dsh plugin` forwards to pnpm in the profile directory. pnpm 11 defaults `minimumReleaseAge` to about 24 hours: a bare name or `@latest` may silently install an older build. Pin the release you want (e.g. `@0.1.5`). If it still will not resolve, wait out the 24 hours, or add the package version under `minimumReleaseAgeExclude` in `~/.dsh/profiles/web/pnpm-workspace.yaml` (or set `minimumReleaseAge: 0` to disable the cooldown).
 
 After the browser opens, wait a few seconds and hard-refresh (Windows / Linux: `Ctrl+Shift+R`, macOS: `Cmd+Shift+R`). You should see the session total at the bottom and a cost control on each assistant message. If not, restart `dsh web` and hard-refresh again.
 
@@ -47,7 +47,7 @@ Remove the old install, then add the pinned release from the install section abo
 
 ```bash
 npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
 ```
 
 Restart `dsh web` and hard-refresh.
@@ -199,7 +199,7 @@ After beta checks out, open a PR and merge to `main`. Do not publish the release
 
 #### 4. Publish the release
 
-On `main`, set all three `version` fields to the release (e.g. `0.1.4`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Then update the pinned `@0.1.4` in the install section above.
+On `main`, set all three `version` fields to the release (e.g. `0.1.4`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Then update the pinned `@0.1.5` in the install section above.
 
 ```bash
 pnpm build
@@ -213,7 +213,7 @@ Verify with the same pinned version (remove, then add):
 
 ```bash
 dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.4
+dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
 ```
 
 Restart and hard-refresh.

@@ -6,7 +6,7 @@
 
 ## [Unreleased]
 
-## [0.1.5-beta.0] - 2026-08-23
+## [0.1.5] - 2026-08-23
 
 ### Fixed
 
@@ -48,8 +48,8 @@
 - 默认 DeepSeek v4 flash / pro 平价与峰谷价表（2026-08-17 起切峰谷）。
 - 聚合包 `@javenlu233/dsh-cost-monitor` 一键安装。
 
-[Unreleased]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.5-beta.0...HEAD
-[0.1.5-beta.0]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.4...v0.1.5-beta.0
+[Unreleased]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.1...v0.1.2
