@@ -19,7 +19,7 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 - 与 token-meter 的 `tokenUsage` 折叠一致：usage chunk 提供早到样本（请求失败后仍保留），组装出的 `assistant/message` 会替换同 `turn`/`step` 的样本，chunk 与 message 不会重复计数。
 - 辅助 DeepSeek `web_search` 用量从 Messages 响应捕获，写入不透明的 `tool/result.meta.sessionCost`，再累加进触发搜索的那一轮（不会替换会话主模型用量），并按搜索模型自身单价计价（通常是 `deepseek-v4-flash`）。
 - `request/context` 是会话主模型样本的 last-wins 路由记录；样本归属到最新路由，无记录或路由无配置价时回退到 `defaultRoute`。
-- 峰谷窗口为固定时区下的 `[start, end)` 小时区间（默认北京时间 9:00–12:00、14:00–18:00，偏移 +480 分钟）。
+- 峰谷窗口为固定时区下周一至周五的 `[start, end)` 小时区间（默认北京时间 9:00–12:00、14:00–18:00，偏移 +480 分钟；周末与其余时段为谷时）。
 - 各桶在首个贡献事件前为 0；`total` 为四桶费用之和，`cacheHitPercent` 为 `cacheRead / billedInput` 四舍五入取整，`billedInput` 为三个 prompt 侧桶之和。
 
 ## 组合

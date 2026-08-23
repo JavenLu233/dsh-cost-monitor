@@ -69,7 +69,7 @@ Paging and compaction do not change the session total. Compressed turns that are
 
 Figures are **estimates** from the configured table, not an official invoice: peak/off-peak uses each sample’s event time (assembled-message time, not request start), and mid-session model switches are priced only at `request/context` resolution. Results may differ from the provider bill. Units are **CNY per 1M tokens**. Cache writes are billed at the miss rate. Missing or unknown model ids fall back to `deepseek-v4-flash`.
 
-Built-in DeepSeek prices (flat → peak/off-peak from 2026-08-17 00:00 Beijing time; peak windows Beijing 9:00–12:00 and 14:00–18:00):
+Built-in DeepSeek prices (flat → peak/off-peak from 2026-08-17 00:00 Beijing time; peak windows Mon–Fri Beijing 9:00–12:00 and 14:00–18:00, off-peak otherwise):
 
 | Model | Period | Hit | Miss | Cache write | Output |
 | --- | --- | ---: | ---: | ---: | ---: |
