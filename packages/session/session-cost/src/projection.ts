@@ -222,14 +222,18 @@ function takeSlice<K>(map: Map<K, CostSlice>, key: K): CostSlice {
 
 /**
  * Classify a request timestamp into a price bucket: flat before the
- * switchover, otherwise peak/off-peak by the configured windows.
+ * switchover, otherwise peak/off-peak by weekday + configured windows.
+ * Peak applies only Mon–Fri in the configured timezone; weekends are always off-peak.
  * @param timeMs - the usage event's Unix epoch milliseconds.
  * @param config - the pricing config carrying the switchover and windows.
  * @returns the price bucket the sample folds into.
  */
 export function classifyBucket(timeMs: number, config: CostConfig): PriceBucket {
   if (timeMs < config.effectiveAt) return 'flat'
-  const hour = ((Math.floor((timeMs + config.timezoneOffsetMinutes * 60_000) / 3_600_000)) % 24 + 24) % 24
+  const localMs = timeMs + config.timezoneOffsetMinutes * 60_000
+  const dayOfWeek = new Date(localMs).getUTCDay()
+  if (dayOfWeek === 0 || dayOfWeek === 6) return 'offPeak'
+  const hour = ((Math.floor(localMs / 3_600_000) % 24) + 24) % 24
   return config.peakWindows.some(([start, end]) => hour >= start && hour < end) ? 'peak' : 'offPeak'
 }
 

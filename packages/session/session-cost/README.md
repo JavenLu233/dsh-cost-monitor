@@ -19,7 +19,7 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 - Mirrors token-meter's `tokenUsage` fold: a usage chunk provides an early sample that survives a later request failure, and an assembled `assistant/message` replaces that step's sample (same `turn`/`step`), so a chunk and its message never double count.
 - Auxiliary DeepSeek `web_search` usage is captured from the Messages response and attached as opaque `tool/result.meta.sessionCost`, then folded additively into the triggering turn (it never replaces conversation usage). It is priced at the search model's own rate (typically `deepseek-v4-flash`).
 - `request/context` is a last-wins route record for conversation samples; a sample attributes to the newest route, falling back to `defaultRoute` when none is recorded or a route has no configured price.
-- Peak windows are `[start, end)` hours in a fixed-offset timezone (default Beijing 9:00–12:00 and 14:00–18:00, +480 minutes).
+- Peak windows are `[start, end)` hours on Mon–Fri in a fixed-offset timezone (default Beijing 9:00–12:00 and 14:00–18:00, +480 minutes; weekends and other hours are off-peak).
 - Every bucket is 0 until its first contributing event; `total` sums the four bucket costs, `cacheHitPercent` is `cacheRead / billedInput` rounded to an integer, and `billedInput` sums the three prompt-side buckets.
 
 ## Composition

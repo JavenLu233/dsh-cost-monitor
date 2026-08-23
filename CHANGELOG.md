@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-23
+
+### Fixed
+
+- 峰谷判定仅在工作日（周一至周五）的峰时窗口内计为峰时；周末及其余时段一律为谷时（与 DeepSeek 公布规则一致）。
+
 ### Changed
 
 - 安装说明更正：24 小时冷却来自 pnpm 11 默认 `minimumReleaseAge`，不是 DSH web profile；钉死版本仍可能需等待或写入 `minimumReleaseAgeExclude`。
@@ -42,7 +48,8 @@
 - 默认 DeepSeek v4 flash / pro 平价与峰谷价表（2026-08-17 起切峰谷）。
 - 聚合包 `@javenlu233/dsh-cost-monitor` 一键安装。
 
-[Unreleased]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/JavenLu233/dsh-cost-monitor/compare/v0.1.1...v0.1.2
