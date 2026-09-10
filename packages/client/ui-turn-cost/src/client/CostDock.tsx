@@ -6,7 +6,7 @@
  * button that opens the session cost stats dialog.
  */
 import { memo, useEffect, useState } from 'react'
-import type { UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
+import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: merges the sessionCost key into SessionProjectionMap for useProjection.

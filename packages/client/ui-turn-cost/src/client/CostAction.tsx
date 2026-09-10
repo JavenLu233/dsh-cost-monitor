@@ -7,10 +7,12 @@
  * coexists with the produced-files row.
  */
 import { memo, useMemo } from 'react'
-import type { AssistantMessageNode } from '@deepseek-ai/dsh-client-runtime/client'
+import type { AssistantMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
 // Type-only: brings the 'conversation.chat.assistant-actions' SlotMap row into
 // this program so PropsRuntime can type the owner share.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+// Type-only: augments the slot owner with the current chat snapshot hook.
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: merges the sessionCost key into SessionProjectionMap for useProjection.
@@ -37,13 +39,13 @@ export type CostActionProps = PropsRuntime<'conversation.chat.assistant-actions'
  */
 export const CostAction = memo(function CostAction({
   messageId,
-  useSession,
+  useChat,
   useProjection,
   useVisibility,
   toggleMessage,
   t,
 }: CostActionProps) {
-  const nodes = useSession(snapshot => snapshot.chat.legacy.nodes)
+  const nodes = useChat(snapshot => snapshot.legacy.nodes)
   const shown = useVisibility(value => value.overrides[String(messageId)] ?? value.showAll)
   const cost = useProjection('sessionCost')
 

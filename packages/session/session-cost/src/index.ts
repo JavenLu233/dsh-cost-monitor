@@ -17,7 +17,7 @@ import type { CostConfig } from './pricing.ts'
 import { installSearchCostCapture } from './capture.ts'
 import { sessionCostProjectionDefinition } from './projection.ts'
 
-export type { BucketPrices, RoutePrices } from './pricing.ts'
+export type { BucketPrices, RoutePriceUpdate, RoutePrices } from './pricing.ts'
 
 /** The plugin config: currency, route fallback, peak schedule, and the price table. */
 export type Config = CostConfig
@@ -34,6 +34,12 @@ const bucketPricesSchema = z.object({
   output: z.number(),
 })
 
+const routePriceUpdateSchema = z.object({
+  effectiveAt: z.number(),
+  peak: bucketPricesSchema,
+  offPeak: bucketPricesSchema,
+})
+
 /** Loader schema; defaults to the DeepSeek flat + peak/off-peak table. */
 export const Config = z.object({
   currency: z.string().default(DEFAULT_COST_CONFIG.currency),
@@ -45,6 +51,7 @@ export const Config = z.object({
     flat: bucketPricesSchema,
     peak: bucketPricesSchema,
     offPeak: bucketPricesSchema,
+    updates: z.array(routePriceUpdateSchema).default([]),
   })).default(DEFAULT_PRICES),
 }) as unknown as z<Config>
 

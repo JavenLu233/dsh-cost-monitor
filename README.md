@@ -25,11 +25,11 @@ DeepSeek Harness (DSH) 费用展示插件: 底部累计 + 每轮费用 + 会话�
 装好 [Node.js](https://nodejs.org/) 后执行：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5 # 此处的版本号随每次正式发布更新
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
 npx @deepseek-ai/dsh web
 ```
 
-> `dsh plugin` 在 profile 目录里转发到 pnpm。pnpm 11 默认 `minimumReleaseAge` 为约 24 小时：裸包名或 `@latest` 可能静默装上更早的版本。刚发布的号请钉死（如 `@0.1.5`）；若仍装不上，等满 24 小时，或在 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里加上对应包版本（也可设 `minimumReleaseAge: 0` 关闭冷却）。
+`dsh plugin` 会在 profile 目录里转发 pnpm。裸包名安装会写入正常的 semver 依赖范围，日常不需要把版本号写死。刚发布的版本可能受 pnpm 的 `minimumReleaseAge` 或 npm 镜像同步延迟影响，暂时仍解析到旧版；这属于包管理器 / registry 的等待，不需要永久锁定版本。想立即验证新发布的包，可以等待 registry 同步，或在 profile 的 `.npmrc` 临时使用 `registry=https://registry.npmjs.org`；也可以在 `pnpm-workspace.yaml` 设置 `minimumReleaseAge: 0`。
 
 浏览器打开后，插件有时不会立刻出现：等几秒再强制刷新（Windows / Linux：`Ctrl+Shift+R`，macOS：`Cmd+Shift+R`）。底部应出现「累计费用」，每条助手消息有「费用」按钮。若刷新后仍没有，关掉 `dsh web` 再启动一次，然后再强制刷新。
 
@@ -43,11 +43,10 @@ npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 
 ### 更新到最新版
 
-必须先卸掉旧版，再钉死安装段里的正式号；不要用裸包名或 `@latest`（pnpm 冷却原因同上）：
+不需要先卸载，也不需要手写版本号。`--latest` 会让 pnpm 选择 npm `latest` 并更新 profile 中的依赖范围：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
+npx @deepseek-ai/dsh plugin --profile web update --latest @javenlu233/dsh-cost-monitor
 ```
 
 然后重启 `dsh web`，再强制刷新。
@@ -59,31 +58,35 @@ npx @deepseek-ai/dsh plugin --profile web list
 npm view @javenlu233/dsh-cost-monitor version
 ```
 
+这套流程已用当前 dsh 源码验证：先用裸包名安装，再执行 `update --latest`，聚合包及其两个子包会一起更新，且 dsh 会重新同步 `session-cost` / `ui-turn-cost` 配置层。
+
 ## 历史会话
 
 费用从会话的完整用量日志折算，不要求当时已经装着本插件。装好并重启后，打开装插件之前的旧会话，底部同样会给出整段累计费用；每条仍加载在窗口里的助手消息也可以看「本轮」。
 
-分页、压缩不会改累计总额。已被压缩、不在当前窗口里的回合没有单独的「本轮」行，它们的费用仍计入底部累计。每条用量按它自己的事件时间套价格表（2026-08-17 前走平价，之后走峰谷），所以跨涨价日的旧会话也会按当时时段计价。
+分页、压缩不会改累计总额。已被压缩、不在当前窗口里的回合没有单独的「本轮」行，它们的费用仍计入底部累计。每条用量按自己的事件时间套用对应模型路由的价格版本，因此跨调价日的旧会话会保留历史费率。
 
 ## 计价
 
-费用是按配置表的**估算**，不是官方账单：峰谷取各用量样本的事件时间（组装 message 的时间，不是请求开始时间），中途换模型只按 `request/context` 的粒度计价，结果可能和 provider 账单有出入。单位为 **人民币 / 百万 token**。缓存写入按未命中价计。未记录模型或表中没有该模型时，回退到 `deepseek-v4-flash`。
+费用是按配置表的**估算**，不是官方账单：峰谷取各用量样本的事件时间（组装 message 的时间，不是请求开始时间），中途换模型只按 `request/context` 的粒度计价，结果可能和 provider 账单有出入。单位为 **人民币 / 百万 token**。缓存写入按未命中价计。未记录模型或表中没有该模型时，回退到新版默认路由 `deepseek-flash`。
 
-内置 DeepSeek 价格（2026-08-17 00:00 北京时间起从平价切到峰谷；峰时为北京时间周一至周五 9:00–12:00、14:00–18:00，其余为谷时）：
+内置 DeepSeek 价格（人民币 / 百万 token；峰时为北京时间周一至周五 9:00–12:00、14:00–18:00，其余为谷时）。旧 V4 费率从 2026-08-17 00:00 北京时间起按峰谷计价；V4.1-Flash 新费率从 2026-09-10 12:00 起生效；V4-Pro 从 2026-09-14 12:00 起按官方规则路由并按 V4.1-Flash 费率计价：
 
 | 模型 | 时段 | 命中 | 未命中 | 缓存写 | 输出 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `deepseek-v4-flash` | 平价（涨价前） | 0.02 | 1 | 1 | 2 |
-| | 峰时 | 0.10 | 3 | 3 | 9 |
-| | 谷时 | 0.05 | 1.5 | 1.5 | 4.5 |
-| `deepseek-v4-flash-vision-exp` | 平价（涨价前） | 0.02 | 1 | 1 | 2 |
-| | 峰时 | 0.10 | 3 | 3 | 9 |
-| | 谷时 | 0.05 | 1.5 | 1.5 | 4.5 |
+| `deepseek-flash`（新版默认） | 平价（2026-08-17 前） | 0.02 | 1 | 1 | 2 |
+| | 峰时（2026-09-10 前） | 0.10 | 3 | 3 | 9 |
+| | 谷时（2026-09-10 前） | 0.05 | 1.5 | 1.5 | 4.5 |
+| | 峰时（2026-09-10 起） | 0.04 | 2 | 2 | 8 |
+| | 谷时（2026-09-10 起） | 0.02 | 1 | 1 | 4 |
+| `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp`（兼容别名） | 同上 | 同上 | 同上 | 同上 | 同上 |
 | `deepseek-v4-pro` | 平价（涨价前） | 0.025 | 3 | 3 | 6 |
-| | 峰时 | 0.30 | 9 | 9 | 27 |
-| | 谷时 | 0.15 | 4.5 | 4.5 | 13.5 |
+| | 峰时（2026-09-14 前） | 0.30 | 9 | 9 | 27 |
+| | 谷时（2026-09-14 前） | 0.15 | 4.5 | 4.5 | 13.5 |
+| | 峰时（2026-09-14 起，路由至 V4.1-Flash） | 0.04 | 2 | 2 | 8 |
+| | 谷时（2026-09-14 起，路由至 V4.1-Flash） | 0.02 | 1 | 1 | 4 |
 
-`deepseek-v4-flash-vision-exp` 与 flash 公布单价相同；图片按尺寸折成 token 后计入 API 回报的 input 用量，插件不单独做分辨率换算。
+`deepseek-v4-flash` 和 `deepseek-v4-flash-vision-exp` 是兼容别名，调价后按 V4.1-Flash 费率计；图片按尺寸折成 token 后计入 API 回报的 input 用量，插件不单独做分辨率换算。
 
 ### 自定义价格
 
@@ -93,24 +96,44 @@ npm view @javenlu233/dsh-cost-monitor version
 - id: session-cost
   config:
     currency: CNY
-    defaultRoute: deepseek-v4-flash
+    defaultRoute: deepseek-flash
     # 2026-08-17 00:00 北京时间；更早的用量走 flat
     effectiveAt: 1786896000000
     peakWindows: [[9, 12], [14, 18]]
     timezoneOffsetMinutes: 480
     prices:
+      deepseek-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
+        peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000 # 2026-09-10 12:00 北京时间
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-flash:
         flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
         peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-flash-vision-exp:
         flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
         peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-pro:
         flat: { cacheRead: 0.025, uncachedInput: 3, cacheWrite: 3, output: 6 }
         peak: { cacheRead: 0.30, uncachedInput: 9, cacheWrite: 9, output: 27 }
         offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }
+        updates:
+          - effectiveAt: 1789358400000 # 2026-09-14 12:00 北京时间
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
 ```
 
 给其他模型加价：在 `prices` 里用 provider 侧模型 id 再加一项。改完后重启 `dsh web`。
@@ -191,7 +214,7 @@ dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta
 ```
 
-必须写 `@beta` 或完整预发布号。不要用裸包名或 `@latest`（pnpm 冷却原因见上文「安装」）。重启 `dsh web` 并强制刷新。
+必须写 `@beta` 或完整预发布号；beta 验证不使用稳定版的裸包名。重启 `dsh web` 并强制刷新。
 
 #### 3. PR 合进 main
 
@@ -199,7 +222,7 @@ beta 验证通过后开 PR，合进 `main`。不要在合入前发正式包。
 
 #### 4. 发正式包
 
-在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.4`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。发完后把上文「安装（使用者）」里的 `@0.1.5` 改成新号。
+在 `main` 上把三个包的 `version` 改成正式号（例如 `0.1.4`，去掉 `-beta.0`），构建后**不要**加 `--tag`（默认 `latest`）。安装文档保持裸包名，不需要随每次发版改版本号。
 
 ```bash
 pnpm build
@@ -209,11 +232,10 @@ cd packages/client/ui-turn-cost && pnpm publish --no-git-checks && cd ../../..
 cd packages/cost-monitor && pnpm publish --no-git-checks && cd ../..
 ```
 
-验证安装用同一钉死版本（先卸再装）：
+验证已安装 profile 可以直接更新：
 
 ```bash
-dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
+dsh plugin --profile web update --latest @javenlu233/dsh-cost-monitor
 ```
 
 重启并强制刷新。

@@ -18,7 +18,7 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 
 - Mirrors token-meter's `tokenUsage` fold: a usage chunk provides an early sample that survives a later request failure, and an assembled `assistant/message` replaces that step's sample (same `turn`/`step`), so a chunk and its message never double count.
 - Auxiliary DeepSeek `web_search` usage is captured from the Messages response and attached as opaque `tool/result.meta.sessionCost`, then folded additively into the triggering turn (it never replaces conversation usage). It is priced at the search model's own rate (typically `deepseek-v4-flash`).
-- `request/context` is a last-wins route record for conversation samples; a sample attributes to the newest route, falling back to `defaultRoute` when none is recorded or a route has no configured price.
+- `request/context` is a last-wins route record for conversation samples; a sample attributes to the newest route, falling back to `defaultRoute` when none is recorded or a route has no configured price. Each sample also retains the route price revision active at its event time, so later price changes do not reprice history.
 - Peak windows are `[start, end)` hours on Mon–Fri in a fixed-offset timezone (default Beijing 9:00–12:00 and 14:00–18:00, +480 minutes; weekends and other hours are off-peak).
 - Every bucket is 0 until its first contributing event; `total` sums the four bucket costs, `cacheHitPercent` is `cacheRead / billedInput` rounded to an integer, and `billedInput` sums the three prompt-side buckets.
 
@@ -29,29 +29,52 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
   name: '@javenlu233/dsh-session-cost'
 ```
 
-All config fields default to the DeepSeek peak/off-peak table; override any field in a later patch layer. Prices are CNY per 1M tokens, keyed by provider-owned model id:
+All config fields default to the DeepSeek peak/off-peak table; override any field in a later patch layer. Prices are CNY per 1M tokens, keyed by provider-owned model id. Use `updates` for later route-specific peak/off-peak revisions:
 
 ```yaml
 - id: session-cost
   name: '@javenlu233/dsh-session-cost'
   config:
     currency: CNY
-    defaultRoute: deepseek-v4-flash
+    defaultRoute: deepseek-flash
     peakWindows: [[9, 12], [14, 18]]
     timezoneOffsetMinutes: 480
     prices:
+      deepseek-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
+        peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000 # 2026-09-10 12:00 Beijing time
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
         peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-flash-vision-exp:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
         peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-pro:
+        flat: { cacheRead: 0.025, uncachedInput: 3.0, cacheWrite: 3.0, output: 6.0 }
         peak: { cacheRead: 0.30, uncachedInput: 9.0, cacheWrite: 9.0, output: 27.0 }
         offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }
+        updates:
+          - effectiveAt: 1789358400000 # 2026-09-14 12:00 Beijing time
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
 ```
 
-The default table is DeepSeek's published peak/off-peak pricing (effective 2026-08-17); deployments that price another provider or a custom rate override `prices` wholesale.
+The default table is DeepSeek's published peak/off-peak pricing (old V4 pricing effective 2026-08-17, V4.1-Flash pricing effective 2026-09-10, and Pro routing effective 2026-09-14); deployments that price another provider or a custom rate override `prices` wholesale and maintain `updates` themselves.
 
 Injects `sessionProjections` — the plugin's whole purpose; in assemblies without the registry the fiber stays pending and nothing registers.
 

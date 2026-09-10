@@ -5,6 +5,10 @@ import { attachSearchCost } from './search-usage.ts'
 
 /** 2026-08-18 10:00 Beijing — peak after the flat→peak switchover. */
 const PEAK = Date.UTC(2026, 7, 18, 2)
+/** 2026-09-10 14:00 Beijing — peak after the V4.1-Flash price cut. */
+const V41_PEAK = Date.UTC(2026, 8, 10, 6)
+/** 2026-09-14 14:00 Beijing — peak after Pro routes to V4.1-Flash. */
+const PRO_ROUTING_PEAK = Date.UTC(2026, 8, 14, 6)
 
 type Apply = ReturnType<typeof sessionCostProjectionDefinition>['apply']
 type Event = Parameters<Apply>[1]
@@ -103,6 +107,66 @@ describe('sessionCost web_search fold', () => {
         uncachedInput: { tokens: 2_000_000, cost: 6 },
         total: 6,
       }),
+    ])
+  })
+})
+
+describe('sessionCost historical price revisions', () => {
+  it('prices the new deepseek-flash route at V4.1-Flash rates', () => {
+    const cost = fold(
+      event('request/context', { model: 'deepseek-flash' }, V41_PEAK),
+      event('assistant/message', {
+        turn: 1,
+        step: 1,
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+      }, V41_PEAK),
+    )
+
+    expect(cost.total).toBe(2 + 8)
+    expect(cost.byRoute).toEqual([
+      expect.objectContaining({ route: 'deepseek-flash', total: 10 }),
+    ])
+  })
+
+  it('keeps legacy Flash usage at its historical rate across the V4.1 cut', () => {
+    const cost = fold(
+      event('request/context', { model: 'deepseek-v4-flash' }, PEAK),
+      event('assistant/message', {
+        turn: 1,
+        step: 1,
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+      }, PEAK),
+      event('request/context', { model: 'deepseek-v4-flash' }, V41_PEAK),
+      event('assistant/message', {
+        turn: 2,
+        step: 1,
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+      }, V41_PEAK),
+    )
+
+    expect(cost.total).toBe((3 + 9) + (2 + 8))
+    expect(cost.bySchedule.peak.total).toBe(22)
+  })
+
+  it('routes Pro usage to V4.1-Flash rates after the announced cutoff', () => {
+    const cost = fold(
+      event('request/context', { model: 'deepseek-v4-pro' }, V41_PEAK),
+      event('assistant/message', {
+        turn: 1,
+        step: 1,
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+      }, V41_PEAK),
+      event('request/context', { model: 'deepseek-v4-pro' }, PRO_ROUTING_PEAK),
+      event('assistant/message', {
+        turn: 2,
+        step: 1,
+        usage: { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+      }, PRO_ROUTING_PEAK),
+    )
+
+    expect(cost.total).toBe((9 + 27) + (2 + 8))
+    expect(cost.byRoute).toEqual([
+      expect.objectContaining({ route: 'deepseek-v4-pro', total: 46 }),
     ])
   })
 })
