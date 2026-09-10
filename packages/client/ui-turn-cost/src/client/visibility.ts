@@ -2,7 +2,7 @@
  * Shared visibility state for per-turn cost lines: a global default plus
  * per-message overrides, with no priority — the last write wins.
  */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 
 /** Shared visibility state. */
 export interface VisibilityState {

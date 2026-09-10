@@ -1,7 +1,7 @@
 {
   "name": "@javenlu233/dsh-client-ui-turn-cost",
   "description": "Session cost readout for Web: whole-session total in the composer stats strip plus a per-turn cost toggle in each assistant message's action row (pure-consumer client plugin)",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -30,9 +30,12 @@
     },
     "client": {
       "inject": [
+        "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session"
       ],
       "platform": "web"
     }

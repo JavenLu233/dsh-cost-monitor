@@ -25,11 +25,11 @@ DeepSeek Harness (DSH) cost display plugin: session total in the composer dock, 
 With [Node.js](https://nodejs.org/) installed:
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5 # pin the release you want
+npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor
 npx @deepseek-ai/dsh web
 ```
 
-> `dsh plugin` forwards to pnpm in the profile directory. pnpm 11 defaults `minimumReleaseAge` to about 24 hours: a bare name or `@latest` may silently install an older build. Pin the release you want (e.g. `@0.1.5`). If it still will not resolve, wait out the 24 hours, or add the package version under `minimumReleaseAgeExclude` in `~/.dsh/profiles/web/pnpm-workspace.yaml` (or set `minimumReleaseAge: 0` to disable the cooldown).
+`dsh plugin` forwards to pnpm in the profile directory. A bare package name writes a normal semver range, so routine installs do not need a hard-coded version. A freshly published release may still be held back by pnpm's `minimumReleaseAge` or delayed by an npm mirror; that is a package-manager / registry delay, not a reason to permanently pin the version. To verify a new release immediately, wait for registry propagation, or temporarily set `registry=https://registry.npmjs.org` in the profile `.npmrc`; you can also set `minimumReleaseAge: 0` in `pnpm-workspace.yaml`.
 
 After the browser opens, wait a few seconds and hard-refresh (Windows / Linux: `Ctrl+Shift+R`, macOS: `Cmd+Shift+R`). You should see the session total at the bottom and a cost control on each assistant message. If not, restart `dsh web` and hard-refresh again.
 
@@ -43,11 +43,10 @@ npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 
 ### Update to the latest release
 
-Remove the old install, then add the pinned release from the install section above. Do not use a bare name or `@latest` (same pnpm cooldown):
+No uninstall or hand-written version is needed. `--latest` makes pnpm select npm's `latest` tag and update the dependency range in the profile:
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-npx @deepseek-ai/dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
+npx @deepseek-ai/dsh plugin --profile web update --latest @javenlu233/dsh-cost-monitor
 ```
 
 Restart `dsh web` and hard-refresh.
@@ -59,31 +58,35 @@ npx @deepseek-ai/dsh plugin --profile web list
 npm view @javenlu233/dsh-cost-monitor version
 ```
 
+This flow is verified against the current dsh source: install with the bare package name, then run `update --latest`; the aggregate package and its two children update together, and dsh reconciles the `session-cost` / `ui-turn-cost` bundle layers.
+
 ## Historical sessions
 
 Cost is folded from the session’s full usage log. The plugin need not have been installed when the session was recorded. After install and restart, older sessions still show a whole-log total; assistant messages still in the window also get a “this turn” line.
 
-Paging and compaction do not change the session total. Compressed turns that are no longer in the window have no per-turn row, but their cost remains in the total. Each usage sample is priced by its own event time (flat before 2026-08-17, peak/off-peak after), so sessions that cross the price change are billed by period.
+Paging and compaction do not change the session total. Compressed turns that are no longer in the window have no per-turn row, but their cost remains in the total. Each usage sample is priced by its event time and the route price revision active then, so historical usage is not repriced after a later change.
 
 ## Pricing
 
-Figures are **estimates** from the configured table, not an official invoice: peak/off-peak uses each sample’s event time (assembled-message time, not request start), and mid-session model switches are priced only at `request/context` resolution. Results may differ from the provider bill. Units are **CNY per 1M tokens**. Cache writes are billed at the miss rate. Missing or unknown model ids fall back to `deepseek-v4-flash`.
+Figures are **estimates** from the configured table, not an official invoice: peak/off-peak uses each sample’s event time (assembled-message time, not request start), and mid-session model switches are priced only at `request/context` resolution. Results may differ from the provider bill. Units are **CNY per 1M tokens**. Cache writes are billed at the miss rate. Missing or unknown model ids fall back to the new default route `deepseek-flash`.
 
-Built-in DeepSeek prices (flat → peak/off-peak from 2026-08-17 00:00 Beijing time; peak windows Mon–Fri Beijing 9:00–12:00 and 14:00–18:00, off-peak otherwise):
+Built-in DeepSeek prices (CNY per 1M tokens; peak windows Mon–Fri Beijing 9:00–12:00 and 14:00–18:00, off-peak otherwise). Old V4 peak/off-peak pricing starts 2026-08-17 00:00 Beijing time; V4.1-Flash pricing starts 2026-09-10 12:00; V4-Pro routes to the V4.1-Flash rates from 2026-09-14 12:00:
 
 | Model | Period | Hit | Miss | Cache write | Output |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `deepseek-v4-flash` | Flat (pre-change) | 0.02 | 1 | 1 | 2 |
-| | Peak | 0.10 | 3 | 3 | 9 |
-| | Off-peak | 0.05 | 1.5 | 1.5 | 4.5 |
-| `deepseek-v4-flash-vision-exp` | Flat (pre-change) | 0.02 | 1 | 1 | 2 |
-| | Peak | 0.10 | 3 | 3 | 9 |
-| | Off-peak | 0.05 | 1.5 | 1.5 | 4.5 |
+| `deepseek-flash` (new default) | Flat (before 2026-08-17) | 0.02 | 1 | 1 | 2 |
+| | Peak (before 2026-09-10) | 0.10 | 3 | 3 | 9 |
+| | Off-peak (before 2026-09-10) | 0.05 | 1.5 | 1.5 | 4.5 |
+| | Peak (from 2026-09-10) | 0.04 | 2 | 2 | 8 |
+| | Off-peak (from 2026-09-10) | 0.02 | 1 | 1 | 4 |
+| `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` (legacy aliases) | Same as above | Same | Same | Same | Same |
 | `deepseek-v4-pro` | Flat (pre-change) | 0.025 | 3 | 3 | 6 |
-| | Peak | 0.30 | 9 | 9 | 27 |
-| | Off-peak | 0.15 | 4.5 | 4.5 | 13.5 |
+| | Peak (before 2026-09-14) | 0.30 | 9 | 9 | 27 |
+| | Off-peak (before 2026-09-14) | 0.15 | 4.5 | 4.5 | 13.5 |
+| | Peak (from 2026-09-14, routed to V4.1-Flash) | 0.04 | 2 | 2 | 8 |
+| | Off-peak (from 2026-09-14, routed to V4.1-Flash) | 0.02 | 1 | 1 | 4 |
 
-`deepseek-v4-flash-vision-exp` matches flash’s published rates; image tokens are already included in API-reported input usage — the plugin does not recompute from image dimensions.
+`deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` are legacy aliases and use V4.1-Flash rates after the cut; image tokens are already included in API-reported input usage — the plugin does not recompute from image dimensions.
 
 ### Custom prices
 
@@ -93,24 +96,44 @@ Edit the profile’s `cordis.patch.yml` (default `~/.dsh/profiles/web/cordis.pat
 - id: session-cost
   config:
     currency: CNY
-    defaultRoute: deepseek-v4-flash
+    defaultRoute: deepseek-flash
     # 2026-08-17 00:00 Beijing; earlier usage uses flat
     effectiveAt: 1786896000000
     peakWindows: [[9, 12], [14, 18]]
     timezoneOffsetMinutes: 480
     prices:
+      deepseek-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
+        peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000 # 2026-09-10 12:00 Beijing time
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-flash:
         flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
         peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-flash-vision-exp:
         flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 }
         peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
       deepseek-v4-pro:
         flat: { cacheRead: 0.025, uncachedInput: 3, cacheWrite: 3, output: 6 }
         peak: { cacheRead: 0.30, uncachedInput: 9, cacheWrite: 9, output: 27 }
         offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }
+        updates:
+          - effectiveAt: 1789358400000 # 2026-09-14 12:00 Beijing time
+            peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 }
 ```
 
 Add other models under `prices` with the provider-owned model id. Restart `dsh web` after edits.
@@ -191,7 +214,7 @@ dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
 dsh plugin --profile web add @javenlu233/dsh-cost-monitor@beta
 ```
 
-Use `@beta` or the full prerelease. Do not use a bare name or `@latest` (pnpm cooldown; see Install above). Restart `dsh web` and hard-refresh.
+Use `@beta` or the full prerelease; beta validation does not use the stable bare package name. Restart `dsh web` and hard-refresh.
 
 #### 3. PR into main
 
@@ -199,7 +222,7 @@ After beta checks out, open a PR and merge to `main`. Do not publish the release
 
 #### 4. Publish the release
 
-On `main`, set all three `version` fields to the release (e.g. `0.1.4`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Then update the pinned `@0.1.5` in the install section above.
+On `main`, set all three `version` fields to the release (e.g. `0.1.4`, drop `-beta.0`), build, and publish **without** `--tag` (default `latest`). Keep the install section on the bare package name; it does not need a version edit for every release.
 
 ```bash
 pnpm build
@@ -209,11 +232,10 @@ cd packages/client/ui-turn-cost && pnpm publish --no-git-checks && cd ../../..
 cd packages/cost-monitor && pnpm publish --no-git-checks && cd ../..
 ```
 
-Verify with the same pinned version (remove, then add):
+Verify an installed profile with a direct update:
 
 ```bash
-dsh plugin --profile web remove @javenlu233/dsh-cost-monitor
-dsh plugin --profile web add @javenlu233/dsh-cost-monitor@0.1.5
+dsh plugin --profile web update --latest @javenlu233/dsh-cost-monitor
 ```
 
 Restart and hard-refresh.

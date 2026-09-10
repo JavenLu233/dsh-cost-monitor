@@ -11,6 +11,8 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the 'conversation.composer.dock' and 'conversation.chat.assistant-actions'
 // SlotMap rows (declared by the owning package) must be in the program to type.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+// Type-only: augments assistant-action slot props with useChat from the chat package.
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import { CostAction } from './CostAction.tsx'
 import { CostDock } from './CostDock.tsx'
 import { en, NS, zh } from './locales.ts'

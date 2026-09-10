@@ -2,10 +2,9 @@
  * Pricing vocabulary and the DeepSeek default table for the session-cost
  * domain. Prices are denominated in one currency (default CNY) per 1M tokens;
  * `cacheWrite` is priced at the miss rate because a cache write is a
- * full-price prompt token. The default table carries both DeepSeek's flat
- * pricing and the peak/off-peak split: `effectiveAt` (2026-08-17 00:00
- * Beijing) selects flat vs peak/off-peak per event time. Deployments override
- * the table through the plugin Config.
+ * full-price prompt token. The default table carries DeepSeek's historical
+ * flat pricing, the August peak/off-peak split, and the September V4.1-Flash
+ * price cut. Deployments override the table through the plugin Config.
  *
  * @module @javenlu233/dsh-session-cost/pricing
  */
@@ -22,6 +21,16 @@ export interface BucketPrices {
   output: number
 }
 
+/** A later peak/off-peak price revision for one model route. */
+export interface RoutePriceUpdate {
+  /** Epoch ms when this route revision starts billing. */
+  effectiveAt: number
+  /** Peak price after the revision. */
+  peak: BucketPrices
+  /** Off-peak price after the revision. */
+  offPeak: BucketPrices
+}
+
 /** Flat, peak, and off-peak prices for one model route. */
 export interface RoutePrices {
   /** Flat price before {@link CostConfig.effectiveAt}. */
@@ -30,6 +39,8 @@ export interface RoutePrices {
   peak: BucketPrices
   /** Off-peak price on/after {@link CostConfig.effectiveAt}. */
   offPeak: BucketPrices
+  /** Later route-specific peak/off-peak revisions, ordered by effective time. */
+  updates?: RoutePriceUpdate[]
 }
 
 /** Plugin config: currency, route fallback, the flat→peak switchover, the peak schedule, and the price table. */
@@ -48,38 +59,60 @@ export interface CostConfig {
   prices: Record<string, RoutePrices>
 }
 
-/** DeepSeek v4-flash prices (CNY per 1M tokens). */
+/** DeepSeek's first V4 Flash prices (CNY per 1M tokens). */
 const FLASH: RoutePrices = {
   flat: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 2 },
   peak: { cacheRead: 0.10, uncachedInput: 3, cacheWrite: 3, output: 9 },
   offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 },
 }
 
-/**
- * DeepSeek v4-flash-vision-exp: same published peak/off-peak rates as flash.
- * Flat mirrors flash for the shared pre-2026-08-17 schedule; the model shipped
- * after that switchover, so live usage always hits peak/offPeak.
- */
-const FLASH_VISION: RoutePrices = FLASH
+/** V4.1-Flash price-cut effective time: 2026-09-10 12:00 Beijing. */
+export const V41_FLASH_EFFECTIVE_AT = Date.UTC(2026, 8, 10, 4)
 
-/** DeepSeek v4-pro prices (CNY per 1M tokens). */
+/** V4.1-Flash rates published by DeepSeek (CNY per 1M tokens). */
+const FLASH_V41_UPDATE: RoutePriceUpdate = {
+  effectiveAt: V41_FLASH_EFFECTIVE_AT,
+  peak: { cacheRead: 0.04, uncachedInput: 2, cacheWrite: 2, output: 8 },
+  offPeak: { cacheRead: 0.02, uncachedInput: 1, cacheWrite: 1, output: 4 },
+}
+
+/** DeepSeek V4.1-Flash route history: old V4 rates, then the September cut. */
+const FLASH_V41: RoutePrices = { ...FLASH, updates: [FLASH_V41_UPDATE] }
+
+/**
+ * Legacy vision route history: it is billed at V4.1-Flash rates after the
+ * retirement cut, while historical V4 usage keeps its original rate.
+ */
+const FLASH_VISION: RoutePrices = FLASH_V41
+
+/** DeepSeek V4-Pro prices before the announced routing change (CNY per 1M tokens). */
 const PRO: RoutePrices = {
   flat: { cacheRead: 0.025, uncachedInput: 3, cacheWrite: 3, output: 6 },
   peak: { cacheRead: 0.30, uncachedInput: 9, cacheWrite: 9, output: 27 },
   offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 },
 }
 
+/** Pro-to-Flash routing starts 2026-09-14 12:00 Beijing. */
+export const V41_PRO_ROUTING_AT = Date.UTC(2026, 8, 14, 4)
+
+/** V4-Pro route history: Pro pricing until routing, then V4.1-Flash pricing. */
+const PRO_WITH_ROUTING: RoutePrices = {
+  ...PRO,
+  updates: [{ ...FLASH_V41_UPDATE, effectiveAt: V41_PRO_ROUTING_AT }],
+}
+
 /** Default per-model price table keyed by provider-owned model id. */
 export const DEFAULT_PRICES: Record<string, RoutePrices> = {
-  'deepseek-v4-flash': FLASH,
+  'deepseek-flash': FLASH_V41,
+  'deepseek-v4-flash': FLASH_V41,
   'deepseek-v4-flash-vision-exp': FLASH_VISION,
-  'deepseek-v4-pro': PRO,
+  'deepseek-v4-pro': PRO_WITH_ROUTING,
 }
 
 /** The plugin's full default config (each field's schema default). */
 export const DEFAULT_COST_CONFIG: CostConfig = {
   currency: 'CNY',
-  defaultRoute: 'deepseek-v4-flash',
+  defaultRoute: 'deepseek-flash',
   // 2026-08-17 00:00 Beijing (UTC+8) = 2026-08-16 16:00 UTC.
   effectiveAt: Date.UTC(2026, 7, 17) - 8 * 3_600_000,
   peakWindows: [[9, 12], [14, 18]],

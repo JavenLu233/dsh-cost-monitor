@@ -18,7 +18,7 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 
 - 与 token-meter 的 `tokenUsage` 折叠一致：usage chunk 提供早到样本（请求失败后仍保留），组装出的 `assistant/message` 会替换同 `turn`/`step` 的样本，chunk 与 message 不会重复计数。
 - 辅助 DeepSeek `web_search` 用量从 Messages 响应捕获，写入不透明的 `tool/result.meta.sessionCost`，再累加进触发搜索的那一轮（不会替换会话主模型用量），并按搜索模型自身单价计价（通常是 `deepseek-v4-flash`）。
-- `request/context` 是会话主模型样本的 last-wins 路由记录；样本归属到最新路由，无记录或路由无配置价时回退到 `defaultRoute`。
+- `request/context` 是会话主模型样本的 last-wins 路由记录；样本归属到最新路由，无记录或路由无配置价时回退到 `defaultRoute`。每个用量样本还会记录该路由当时生效的价格版本，因此后续调价不会重算旧用量。
 - 峰谷窗口为固定时区下周一至周五的 `[start, end)` 小时区间（默认北京时间 9:00–12:00、14:00–18:00，偏移 +480 分钟；周末与其余时段为谷时）。
 - 各桶在首个贡献事件前为 0；`total` 为四桶费用之和，`cacheHitPercent` 为 `cacheRead / billedInput` 四舍五入取整，`billedInput` 为三个 prompt 侧桶之和。
 
@@ -29,29 +29,52 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
   name: '@javenlu233/dsh-session-cost'
 ```
 
-所有配置字段默认取 DeepSeek 峰谷价格表；可在后续 patch 层覆盖任一字段。价格为人民币 / 百万 token，按 provider 侧模型 id 为键：
+所有配置字段默认取 DeepSeek 峰谷价格表；可在后续 patch 层覆盖任一字段。价格为人民币 / 百万 token，按 provider 侧模型 id 为键；`updates` 用于记录该模型后续生效的峰/谷价格版本：
 
 ```yaml
 - id: session-cost
   name: '@javenlu233/dsh-session-cost'
   config:
     currency: CNY
-    defaultRoute: deepseek-v4-flash
+    defaultRoute: deepseek-flash
     peakWindows: [[9, 12], [14, 18]]
     timezoneOffsetMinutes: 480
     prices:
+      deepseek-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
+        peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
+        offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000 # 2026-09-10 12:00 北京时间
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-flash:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
         peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-flash-vision-exp:
+        flat: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 2.0 }
         peak: { cacheRead: 0.10, uncachedInput: 3.0, cacheWrite: 3.0, output: 9.0 }
         offPeak: { cacheRead: 0.05, uncachedInput: 1.5, cacheWrite: 1.5, output: 4.5 }
+        updates:
+          - effectiveAt: 1789012800000
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
       deepseek-v4-pro:
+        flat: { cacheRead: 0.025, uncachedInput: 3.0, cacheWrite: 3.0, output: 6.0 }
         peak: { cacheRead: 0.30, uncachedInput: 9.0, cacheWrite: 9.0, output: 27.0 }
         offPeak: { cacheRead: 0.15, uncachedInput: 4.5, cacheWrite: 4.5, output: 13.5 }
+        updates:
+          - effectiveAt: 1789358400000 # 2026-09-14 12:00 北京时间
+            peak: { cacheRead: 0.04, uncachedInput: 2.0, cacheWrite: 2.0, output: 8.0 }
+            offPeak: { cacheRead: 0.02, uncachedInput: 1.0, cacheWrite: 1.0, output: 4.0 }
 ```
 
-默认表为 DeepSeek 公布的峰谷价格（2026-08-17 生效）；为其他 provider 或自定义费率计价时整体覆盖 `prices`。
+默认表为 DeepSeek 公布的峰谷价格（旧 V4 价格自 2026-08-17 生效，V4.1-Flash 价格自 2026-09-10 生效，Pro 路由切换自 2026-09-14 生效）；为其他 provider 或自定义费率计价时整体覆盖 `prices`，并自行维护 `updates`。
 
 注入 `sessionProjections` —— 这是插件的全部目的；在没有 registry 的组合中 fiber 保持 pending，不注册任何东西。
 
@@ -67,7 +90,7 @@ cost = uncachedInput × miss + cacheRead × hit + cacheWrite × miss + output ×
 
 ## Known Limitations and Deferred Work
 
-- **是估算，不是账单** —— 价格来自配置表，峰谷时段取各用量样本的事件时间（组装 message 的时间，而非请求开始时间），会话中途切换模型也只按 `request/context` 的分辨率计价，结果可能与 provider 账单有出入。
+- **是估算，不是账单** —— 价格来自配置表，峰谷时段取各用量样本的事件时间（组装 message 的时间，而非请求开始时间），调价版本也按该时间选择；会话中途切换模型只按 `request/context` 的分辨率计价，结果可能与 provider 账单有出入。
 - **仅累计总量** —— 折叠只发布整会话分桶，不提供按轮次/步骤的明细；按 (route, period) 的键结构为后续细分保留了扩展位。
 - **cache-write 由 provider 可选上报** —— DeepSeek 不上报 cache-write，因此其会话的缓存写桶恒为 0；该桶为上报此指标的 provider 保留。
 - **搜索 token 需要现场捕获** —— 本插件装上之前记下的会话，或未经过 `web_search` 工具、直接调用 `ctx.web.search` 的搜索，没有 `tool/result.meta.sessionCost`，无法补回 flash 搜索用量。

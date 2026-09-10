@@ -33,7 +33,7 @@ type CostPurpose = 'conversation' | 'web_search'
 /** Price bucket of one usage sample: flat before the switchover, peak/off-peak after. */
 export type PriceBucket = 'flat' | 'peak' | 'offPeak'
 
-/** Separator joining turn, route, bucket, and purpose in a state key (never a model id). */
+/** Separator joining turn, route, price phase, bucket, and purpose in a state key (never a model id). */
 const ROUTE_SEPARATOR = '\u0000'
 
 /** One sample's four disjoint token buckets (validated on persisted-cache restore). */
@@ -48,8 +48,9 @@ const costBucketsSchema = z.object({
 type CostBuckets = z.infer<typeof costBucketsSchema>
 
 /**
- * Fold state schema: raw token buckets per (turn, route, bucket, purpose) key,
- * plus replace bookkeeping. Validated before a cache row seeds a fold.
+ * Fold state schema: raw token buckets per (turn, route, price phase, bucket,
+ * purpose) key, plus replace bookkeeping. Validated before a cache row seeds a
+ * fold.
  */
 const sessionCostStateSchema = z.object({
   byKey: z.record(z.string(), costBucketsSchema),
@@ -102,23 +103,43 @@ const allZero = (buckets: CostBuckets): boolean =>
   && buckets.cacheReadTokens === 0
   && buckets.cacheWriteTokens === 0
 
-const keyOf = (turn: number, route: string, bucket: PriceBucket, purpose: CostPurpose): string =>
-  `${turn}${ROUTE_SEPARATOR}${route}${ROUTE_SEPARATOR}${bucket}${ROUTE_SEPARATOR}${purpose}`
+type PricePhase = 'base' | `update:${number}`
+
+const keyOf = (
+  turn: number,
+  route: string,
+  phase: PricePhase,
+  bucket: PriceBucket,
+  purpose: CostPurpose,
+): string =>
+  `${turn}${ROUTE_SEPARATOR}${route}${ROUTE_SEPARATOR}${phase}${ROUTE_SEPARATOR}${bucket}${ROUTE_SEPARATOR}${purpose}`
 
 const splitKey = (key: string): {
   turn: number
   route: string
+  phase: PricePhase
   bucket: PriceBucket
   purpose: CostPurpose
 } => {
-  const first = key.indexOf(ROUTE_SEPARATOR)
-  const second = key.indexOf(ROUTE_SEPARATOR, first + 1)
-  const third = key.indexOf(ROUTE_SEPARATOR, second + 1)
+  const parts = key.split(ROUTE_SEPARATOR)
+  // State version 4 used four fields and is retained here for readable
+  // inspection of old cache rows; version 5 writes the price phase explicitly
+  // so a model can cross a later price revision without re-pricing history.
+  if (parts.length === 4) {
+    return {
+      turn: Number(parts[0]),
+      route: parts[1] ?? '',
+      phase: 'base',
+      bucket: parts[2] as PriceBucket,
+      purpose: parts[3] === 'web_search' ? 'web_search' : 'conversation',
+    }
+  }
   return {
-    turn: Number(key.slice(0, first)),
-    route: key.slice(first + 1, second),
-    bucket: key.slice(second + 1, third) as PriceBucket,
-    purpose: key.slice(third + 1) === 'web_search' ? 'web_search' : 'conversation',
+    turn: Number(parts[0]),
+    route: parts[1] ?? '',
+    phase: (parts[2] as PricePhase | undefined) ?? 'base',
+    bucket: (parts[3] as PriceBucket | undefined) ?? 'flat',
+    purpose: parts[4] === 'web_search' ? 'web_search' : 'conversation',
   }
 }
 
@@ -237,10 +258,31 @@ export function classifyBucket(timeMs: number, config: CostConfig): PriceBucket 
   return config.peakWindows.some(([start, end]) => hour >= start && hour < end) ? 'peak' : 'offPeak'
 }
 
-/** Resolve the per-bucket price for one route and bucket, with the configured default as fallback. */
-function bucketPriceFor(config: CostConfig, route: string, bucket: PriceBucket): BucketPrices {
-  const routePrices = config.prices[route] ?? config.prices[config.defaultRoute]
+/** Resolve the configured route price entry, falling back to the default route. */
+function routePricesFor(config: CostConfig, route: string) {
+  return config.prices[route] ?? config.prices[config.defaultRoute]
+}
+
+/** Resolve the route's price revision active at one event time. */
+function pricePhaseAt(timeMs: number, config: CostConfig, route: string): PricePhase {
+  if (timeMs < config.effectiveAt) return 'base'
+  const routePrices = routePricesFor(config, route)
+  let phase: PricePhase = 'base'
+  for (const [index, update] of (routePrices?.updates ?? []).entries()) {
+    if (timeMs >= update.effectiveAt) phase = `update:${index}`
+  }
+  return phase
+}
+
+/** Resolve the per-bucket price for one route, phase, and bucket. */
+function bucketPriceFor(config: CostConfig, route: string, phase: PricePhase, bucket: PriceBucket): BucketPrices {
+  const routePrices = routePricesFor(config, route)
   if (routePrices === undefined) return ZERO_BUCKET_PRICES
+  if (phase !== 'base' && bucket !== 'flat') {
+    const index = Number(phase.slice('update:'.length))
+    const update = routePrices.updates?.[index]
+    if (update !== undefined) return update[bucket]
+  }
   return routePrices[bucket]
 }
 
@@ -263,8 +305,8 @@ function viewSessionCost(state: SessionCostState, config: CostConfig): SessionCo
     totals.outputTokens += buckets.outputTokens
     totals.cacheReadTokens += buckets.cacheReadTokens
     totals.cacheWriteTokens += buckets.cacheWriteTokens
-    const { turn, route, bucket, purpose } = splitKey(key)
-    const price = bucketPriceFor(config, route, bucket)
+    const { turn, route, phase, bucket, purpose } = splitKey(key)
+    const price = bucketPriceFor(config, route, phase, bucket)
     const priced = {
       uncachedInput: buckets.uncachedInputTokens / 1_000_000 * price.uncachedInput,
       cacheRead: buckets.cacheReadTokens / 1_000_000 * price.cacheRead,
@@ -341,7 +383,9 @@ export function sessionCostProjectionDefinition(config: CostConfig) {
         const buckets = bucketsFrom(sample)
         if (allZero(buckets)) return state
         const route = sample.model
-        const key = keyOf(data.turn, route, classifyBucket(event.time, config), 'web_search')
+        const bucket = classifyBucket(event.time, config)
+        const phase = pricePhaseAt(event.time, config, route)
+        const key = keyOf(data.turn, route, phase, bucket, 'web_search')
         const byKey = addToKey(state.byKey, key, undefined, buckets)
         if (byKey === state.byKey) return state
         return { ...state, byKey }
@@ -358,7 +402,10 @@ export function sessionCostProjectionDefinition(config: CostConfig) {
         return state
       }
       const buckets = bucketsFrom(usage)
-      const key = keyOf(turn, state.route, classifyBucket(event.time, config), 'conversation')
+      const route = state.route
+      const bucket = classifyBucket(event.time, config)
+      const phase = pricePhaseAt(event.time, config, route)
+      const key = keyOf(turn, route, phase, bucket, 'conversation')
       const previous = state.last !== null && state.last.turn === turn && state.last.step === step
         ? state.last
         : undefined
@@ -372,6 +419,8 @@ export function sessionCostProjectionDefinition(config: CostConfig) {
       viewSchema: sessionCostSchema,
       view: state => viewSessionCost(state, config),
     },
-    stateVersion: 4,
+    // The state key now retains a route price revision so later DeepSeek price
+    // cuts do not re-price the earlier part of a session at today's rates.
+    stateVersion: 5,
   } satisfies ProjectionDefinition<'sessionCost', SessionCostState>
 }

@@ -17,24 +17,20 @@ const ID = '@javenlu233/dsh-client-ui-turn-cost'
 const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 
-/** Shell-shared module specifiers (mirrors dsh-client-web platform.ts). */
+/** Shell-shared module specifiers (mirrors the latest dsh-client-web platform.ts). */
 const PLATFORM_MODULES = [
   'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client', '@deepseek-ai/cordis',
+  '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
-  '@deepseek-ai/dsh-client-web-react',
   '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-ui-attachment',
-  '@deepseek-ai/dsh-client-schema-form',
+  '@deepseek-ai/dsh-client-ui-dockkit',
 ] as const
-
-/** The snapshot-store engine lives in runtime pending rehoming; external like the harness preset. */
-const RUNTIME_STORE = '@deepseek-ai/dsh-client-runtime/client'
 
 /** Wire/type layers safe to inline (no shared runtime identity). */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(host-apiproxy|session|llm|tools|brand)(\/|$)/
 const VENDORED_LIBRARY = /^@deepseek-ai\/(cosmokit|schemastery)(\/|$)/
 
-const EXTERNALS = [...PLATFORM_MODULES, RUNTIME_STORE] as const
+const EXTERNALS = PLATFORM_MODULES
 
 export default defineConfig([
   {
